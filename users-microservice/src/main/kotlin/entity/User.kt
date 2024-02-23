@@ -26,4 +26,13 @@ class User() {
         this.firstName = firstName
         this.lastName = lastName
     }
+
+    constructor(id : String, username: String, password: String, email: String, firstName: String, lastName: String) : this() {
+        this.id = id
+        this.username = username
+        this.password = password
+        this.email = email
+        this.firstName = firstName
+        this.lastName = lastName
+    }
 }

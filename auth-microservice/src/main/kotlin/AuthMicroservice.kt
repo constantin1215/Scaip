@@ -32,12 +32,12 @@ class AuthMicroservice {
     fun consume(msg: ConsumerRecord<String, String>) {
         val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
         val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
-        println("Received msg: $headers and $data")
+        logger.info("Received msg: $headers and $data")
 
         headers["TRACE"] = headers["TRACE"] as String + "AUTH-"
 
         if (Event.valueOf(headers["EVENT"] as String) != Event.LOG_IN) {
-            println("Performing authorization and forwarding to dispatch")
+            logger.info("Performing authorization and forwarding to dispatch")
 
             val newHeaders = RecordHeaders()
             headers.forEach { newHeaders.add(it.key, it.value.encodeToByteArray()) }
@@ -51,6 +51,6 @@ class AuthMicroservice {
             emitter.send(newMsg)
         }
         else
-            println("Performing authentication!")
+            logger.info("Performing authentication!")
     }
 }

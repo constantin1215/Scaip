@@ -15,6 +15,7 @@ import org.eclipse.microprofile.reactive.messaging.Channel
 import org.eclipse.microprofile.reactive.messaging.Emitter
 import org.eclipse.microprofile.reactive.messaging.Incoming
 import org.eclipse.microprofile.reactive.messaging.Message
+import org.jboss.logging.Logger
 import org.licenta.actions.GuestActions
 import org.licenta.exceptions.MissingFieldException
 import org.licenta.exceptions.UnauthorizedAction
@@ -23,12 +24,20 @@ import org.licenta.exceptions.UnauthorizedAction
 @ApplicationScoped
 @ServerEndpoint("/gateway")
 class GatewayWebsocket {
-
-    val gson = Gson()
-    val type = object : TypeToken<Map<String, Any>>() {}.type
+    private val gson = Gson()
+    private val type = object : TypeToken<Map<String, Any>>() {}.type
+    private val logger : Logger = Logger.getLogger(this.javaClass)
+    private lateinit var sessions : Set<Session>
 
     companion object {
         var guests = 0
+    }
+
+    enum class Events {
+        REGISTRATION_SUCCESS,
+        REGISTRATION_FAIL,
+        UPDATE_USER_SUCCESS,
+        UPDATE_USER_FAIL
     }
 
     @Inject
@@ -38,9 +47,8 @@ class GatewayWebsocket {
     @OnOpen
     fun onOpen(session: Session?) {
         println("connection> ${session!!.id}")
-
-
         session.asyncRemote.sendText("guest" + ++guests)
+        sessions = session.openSessions
     }
 
     @OnClose
@@ -72,8 +80,6 @@ class GatewayWebsocket {
 
         if(data["JWT"] != null)
             headers.add("JWT", data["JWT"].toString().encodeToByteArray())
-        else if (data["EVENT"] != GuestActions.LOG_IN.toString() && data["EVENT"] != GuestActions.REGISTER.toString())
-            throw UnauthorizedAction("Cannot perform action without JWT.");
 
         headers.add("EVENT", data["EVENT"].toString().encodeToByteArray())
         headers.add("SESSION_ID", session.id.encodeToByteArray())
@@ -91,6 +97,20 @@ class GatewayWebsocket {
 
     @Incoming("gateway_topic")
     fun consume(msg: ConsumerRecord<String, String>) {
-        println("Received msg from system: ${msg.key()} and ${msg.value()}")
+        val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
+        logger.info("Received msg: $headers and ${msg.value()}")
+
+        val session = sessions.find { it.id.equals(headers["SESSION_ID"]) }
+
+        if (session != null) {
+            when(Events.valueOf(headers["EVENT"] as String)) {
+                Events.REGISTRATION_FAIL, Events.UPDATE_USER_FAIL -> {
+                    session.asyncRemote.sendText(msg.value())
+                }
+                else -> println("TO DO() handle other events")
+            }
+        } else {
+            //TODO Cache response for later or ignore
+        }
     }
 }
