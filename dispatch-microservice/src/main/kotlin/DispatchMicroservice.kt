@@ -34,6 +34,10 @@ class DispatchMicroservice {
     @Channel("gateway_topic")
     lateinit var gatewayEmitter : Emitter<String>
 
+    @Inject
+    @Channel("auth_topic")
+    lateinit var authEmitter : Emitter<String>
+
     @Incoming("dispatch_topic")
     fun consume(msg: ConsumerRecord<String, String>) {
         try {
@@ -77,12 +81,9 @@ class DispatchMicroservice {
 
         val event = parsedData["generatedevent"]
         val details = parsedData["details"]
-        //val payload = parsedData["data"]
+        val payload = parsedData["data"]
         val sessionId = parsedData["sessionid"]!!.dropLast(1)
-        logger.info(event)
-        logger.info(details)
-        //logger.info(payload)
-        logger.info(sessionId)
+        logger.info(payload)
 
         val newHeaders = RecordHeaders()
         newHeaders.add("SESSION_ID", sessionId.encodeToByteArray())
@@ -100,8 +101,28 @@ class DispatchMicroservice {
 
                 gatewayEmitter.send(newMsg)
             }
-            Event.REGISTRATION_SUCCESS -> logger.info("Successful registration")
-            Event.UPDATE_USER_SUCCESS -> logger.info("Successful user update")
+            Event.REGISTRATION_SUCCESS -> {
+                logger.info("Successful registration")
+
+                val newMsg = Message
+                    .of(gson.toJson(payload))
+                    .addMetadata(
+                        OutgoingKafkaRecordMetadata.builder<String>()
+                            .withHeaders(newHeaders).build())
+
+                authEmitter.send(newMsg)
+            }
+            Event.UPDATE_USER_SUCCESS -> {
+                logger.info("Successful user update")
+
+                val newMsg = Message
+                    .of(gson.toJson(payload))
+                    .addMetadata(
+                        OutgoingKafkaRecordMetadata.builder<String>()
+                            .withHeaders(newHeaders).build())
+
+                authEmitter.send(newMsg)
+            }
             else -> println("TO DO() handle event ${data["generatedevent"]}")
         }
     }

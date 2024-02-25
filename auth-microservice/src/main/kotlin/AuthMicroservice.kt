@@ -18,7 +18,9 @@ class AuthMicroservice {
     enum class Event {
         LOG_IN,
         REGISTER,
-        UPDATE_USER
+        UPDATE_USER,
+        REGISTRATION_SUCCESS,
+        UPDATE_USER_SUCCESS,
     }
 
     private val gson = Gson()
@@ -28,6 +30,7 @@ class AuthMicroservice {
     @Inject
     @Channel("dispatch_topic")
     lateinit var emitter : Emitter<String>
+
     @Incoming("auth_topic")
     fun consume(msg: ConsumerRecord<String, String>) {
         val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
@@ -36,21 +39,29 @@ class AuthMicroservice {
 
         headers["TRACE"] = headers["TRACE"] as String + "AUTH-"
 
-        if (Event.valueOf(headers["EVENT"] as String) != Event.LOG_IN) {
-            logger.info("Performing authorization and forwarding to dispatch")
+        when(Event.valueOf(headers["EVENT"] as String)) {
+            Event.LOG_IN -> logger.info("Performing authentication!")
+            Event.REGISTRATION_SUCCESS -> {
+                println("New user")
+            }
+            Event.UPDATE_USER_SUCCESS -> {
+                println("Update user")
 
-            val newHeaders = RecordHeaders()
-            headers.forEach { newHeaders.add(it.key, it.value.encodeToByteArray()) }
+            }
+            else -> {
+                logger.info("Performing authorization and forwarding to dispatch")
 
-            val newMsg = Message
-                .of(gson.toJson(data))
-                .addMetadata(
-                    OutgoingKafkaRecordMetadata.builder<String>()
-                    .withHeaders(newHeaders).build())
+                val newHeaders = RecordHeaders()
+                headers.forEach { newHeaders.add(it.key, it.value.encodeToByteArray()) }
 
-            emitter.send(newMsg)
+                val newMsg = Message
+                    .of(gson.toJson(data))
+                    .addMetadata(
+                        OutgoingKafkaRecordMetadata.builder<String>()
+                            .withHeaders(newHeaders).build())
+
+                emitter.send(newMsg)
+            }
         }
-        else
-            logger.info("Performing authentication!")
     }
 }

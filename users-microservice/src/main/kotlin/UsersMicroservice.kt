@@ -6,6 +6,7 @@ import exceptions.EmailAlreadyExists
 import exceptions.IdNotProvided
 import exceptions.UserDoesNotExist
 import exceptions.UsernameAlreadyExists
+import io.quarkus.elytron.security.common.BcryptUtil
 import io.smallrye.reactive.messaging.kafka.Record
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -72,7 +73,7 @@ class UsersMicroservice {
                         userRepository.persist(
                             User(
                                 data["username"] as String,
-                                data["password"] as String,
+                                BcryptUtil.bcryptHash(data["password"] as String),
                                 data["email"] as String,
                                 data["firstName"] as String,
                                 data["lastName"] as String
@@ -111,7 +112,7 @@ class UsersMicroservice {
 
                         user.email = data["email"] as String
                         user.username = data["username"] as String
-                        user.password = data["password"] as String
+                        user.password = BcryptUtil.bcryptHash(data["password"] as String)
                         user.firstName = data["firstName"] as String
                         user.lastName = data["lastName"] as String
 

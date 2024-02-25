@@ -10,7 +10,7 @@ class User() {
     lateinit var id : String
     @Column(nullable = false, unique = true, length = 30)
     lateinit var username : String
-    @Column(nullable = false, length = 16)
+    @Column(nullable = false)
     lateinit var password : String
     @Column(nullable = false, unique = true, length = 200)
     lateinit var email : String

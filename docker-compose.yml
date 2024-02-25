@@ -30,6 +30,16 @@ services:
       POSTGRES_USER: costi
       POSTGRES_DB: app-users
     command: [ "postgres", "-c", "wal_level=logical" ]
+  postgres-auth:
+    container_name: "postgres-auth"
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: costi
+      POSTGRES_DB: app-auth
+    command: [ "postgres", "-c", "wal_level=logical" ]
   debezium:
     container_name: "debezium"
     image: quay.io/debezium/connect:2.4
@@ -44,15 +54,19 @@ services:
       - CONFIG_STORAGE_TOPIC=connect_configs
       - OFFSET_STORAGE_TOPIC=connect_offsets
       - STATUS_STORAGE_TOPIC=connect_statuses
-#  crdb-users:
-#   container_name: "crdb-users"
-#   image: cockroachdb/cockroach:v23.2.0
-#   ports:
-#     - "26258:26257"
-#     - "8090:8080"
-#   command: start-single-node --insecure
-#   volumes:
-#     - "${PWD}/cockroach-data/crdb:/cockroach/cockroach-data"
+  gateway-microservice:
+    container_name: "gateway"
+    image: constatin1215/gateway-ms:v1
+    ports:
+      - "8080:8080"
+    links:
+      - kafka
+  users-microservice:
+    container_name: "users-ms"
+    image: constatin1215/users-ms:v1
+    links:
+      - kafka
+      - postgres-users
 volumes:
   kafka_data:
     driver: local
