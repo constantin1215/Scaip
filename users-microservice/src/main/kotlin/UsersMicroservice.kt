@@ -35,10 +35,6 @@ class UsersMicroservice {
     private val logger : Logger = Logger.getLogger(this.javaClass)
 
     @Inject
-    @Channel("dispatch_topic")
-    lateinit var emitter : Emitter<Record<String, String>>
-
-    @Inject
     lateinit var userRepository: UserRepository
 
     @Inject

@@ -6,7 +6,6 @@ import jakarta.persistence.*
 @Table(name = "\"User\"")
 class User() {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     lateinit var id : String
     @Column(nullable = false, unique = true, length = 30)
     lateinit var username : String

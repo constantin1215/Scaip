@@ -67,6 +67,18 @@ services:
     links:
       - kafka
       - postgres-users
+  auth-microservice:
+    container_name: "auth-ms"
+    image: constatin1215/auth-ms:v1
+    links:
+      - kafka
+      - postgres-users
+  dispatch-microservice:
+    container_name: "dispatch-ms"
+    image: constatin1215/dispatch-ms:v1
+    links:
+      - kafka
+      - postgres-users
 volumes:
   kafka_data:
     driver: local

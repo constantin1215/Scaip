@@ -105,23 +105,25 @@ class DispatchMicroservice {
                 logger.info("Successful registration")
 
                 val newMsg = Message
-                    .of(gson.toJson(payload))
+                    .of(payload)
                     .addMetadata(
                         OutgoingKafkaRecordMetadata.builder<String>()
                             .withHeaders(newHeaders).build())
 
                 authEmitter.send(newMsg)
+                gatewayEmitter.send(newMsg)
             }
             Event.UPDATE_USER_SUCCESS -> {
                 logger.info("Successful user update")
 
                 val newMsg = Message
-                    .of(gson.toJson(payload))
+                    .of(payload)
                     .addMetadata(
                         OutgoingKafkaRecordMetadata.builder<String>()
                             .withHeaders(newHeaders).build())
 
                 authEmitter.send(newMsg)
+                gatewayEmitter.send(newMsg)
             }
             else -> println("TO DO() handle event ${data["generatedevent"]}")
         }
