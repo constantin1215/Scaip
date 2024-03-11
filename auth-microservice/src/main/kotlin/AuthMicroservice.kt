@@ -5,6 +5,7 @@ import exceptions.JWTNotProvided
 import exceptions.UserNotFound
 import io.quarkus.elytron.security.common.BcryptUtil
 import io.smallrye.common.annotation.Blocking
+import io.smallrye.jwt.auth.principal.JWTParser
 import io.smallrye.jwt.build.Jwt
 import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata
 import jakarta.enterprise.context.ApplicationScoped
@@ -18,6 +19,7 @@ import org.eclipse.microprofile.reactive.messaging.Emitter
 import org.eclipse.microprofile.reactive.messaging.Incoming
 import org.eclipse.microprofile.reactive.messaging.Message
 import org.jboss.logging.Logger
+import org.jose4j.jwt.consumer.InvalidJwtException
 import repository.UserRepository
 import java.time.Instant
 import kotlin.concurrent.thread
@@ -38,6 +40,9 @@ class AuthMicroservice {
     private val gson = Gson()
     private val type = object : TypeToken<Map<String, Any>>() {}.type
     private val logger : Logger = Logger.getLogger(this.javaClass)
+
+    @Inject
+    lateinit var parser : JWTParser
 
     @Inject
     @Channel("dispatch_topic")
@@ -91,7 +96,7 @@ class AuthMicroservice {
                 logger.info("User in database ${userRepository.findById(data["id"] as String)}")
             }
             Event.UPDATE_USER_SUCCESS -> {
-                println("Update user")
+                logger.info("Update user")
 
                 val user = userRepository.findById(data["id"] as String)
 
@@ -124,9 +129,10 @@ class AuthMicroservice {
                     if (headers["JWT"] == null)
                         throw JWTNotProvided()
 
-                    val jwt = headers["JWT"]
+                    val jwt = parser.parse(headers["JWT"])
 
-                    logger.info(jwt)
+                    data.remove("JWT")
+                    data["id"] = jwt.subject
 
                     val newMsg = Message
                         .of(gson.toJson(data))
@@ -135,10 +141,17 @@ class AuthMicroservice {
                                 .withHeaders(newHeaders).build())
 
                     dispatchEmitter.send(newMsg)
-                } catch (ex : JWTNotProvided) {
+                } catch (ex : Exception) {
                     newHeaders.add("EVENT", Event.UNAUTHORIZED.toString().encodeToByteArray())
+
+                    val message = when(ex) {
+                        is JWTNotProvided -> "You need to be authenticated to perform ${headers["EVENT"]}."
+                        is InvalidJwtException -> "Session invalid, please log in again."
+                        else -> "Something went wrong."
+                    }
+
                     val newMsg = Message
-                        .of(gson.toJson(mapOf("message" to "You need to be authenticated to perform ${headers["EVENT"]}")))
+                        .of(gson.toJson(mapOf("message" to message)))
                         .addMetadata(
                             OutgoingKafkaRecordMetadata.builder<String>()
                                 .withHeaders(newHeaders).build())
@@ -192,7 +205,15 @@ class AuthMicroservice {
             }
         } catch (ex: UserNotFound) {
             logger.info("User not found!")
+            newHeaders.add("EVENT", Event.LOG_IN_FAIL.toString().encodeToByteArray())
+            val newMsg = Message
+                .of(gson.toJson(mapOf("message" to "The credentials don't match an account!")))
+                .addMetadata(
+                    OutgoingKafkaRecordMetadata.builder<String>()
+                        .withHeaders(newHeaders).build()
+                )
+
+            return newMsg
         }
-        throw RuntimeException()
     }
 }

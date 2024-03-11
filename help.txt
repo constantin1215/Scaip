@@ -1,0 +1,2 @@
+./gradlew build -Dquarkus.container-image.build=true -Dquarkus.container-image.image="constatin1215/kkt-ms:v1"
+
