@@ -40,6 +40,16 @@ services:
       POSTGRES_USER: costi
       POSTGRES_DB: app-auth
     command: [ "postgres", "-c", "wal_level=logical" ]
+  postgres-groups:
+    container_name: "postgres-groups"
+    image: postgres:16-alpine
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: costi
+      POSTGRES_DB: app-groups
+    command: [ "postgres", "-c", "wal_level=logical" ]
   debezium:
     container_name: "debezium"
     image: quay.io/debezium/connect:2.4
@@ -54,6 +64,17 @@ services:
       - CONFIG_STORAGE_TOPIC=connect_configs
       - OFFSET_STORAGE_TOPIC=connect_offsets
       - STATUS_STORAGE_TOPIC=connect_statuses
+  mongodb-query:
+    container_name: 'mongodb-query'
+    image: 'mongo:latest'
+    environment:
+      - 'MONGO_INITDB_DATABASE=query'
+      - 'MONGO_INITDB_ROOT_PASSWORD=secret'
+      - 'MONGO_INITDB_ROOT_USERNAME=root'
+    ports:
+      - '27017:27017'
+    expose:
+      - '27017'
   gateway-microservice:
     container_name: "gateway"
     image: constatin1215/gateway-ms:v1

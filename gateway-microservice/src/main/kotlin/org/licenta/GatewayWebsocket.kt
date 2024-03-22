@@ -2,9 +2,6 @@ package org.licenta
 
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import io.quarkus.runtime.Startup
-import io.smallrye.reactive.messaging.kafka.OutgoingKafkaRecord
-import io.smallrye.reactive.messaging.kafka.api.IncomingKafkaRecordMetadata
 import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
@@ -17,7 +14,6 @@ import org.eclipse.microprofile.reactive.messaging.Emitter
 import org.eclipse.microprofile.reactive.messaging.Incoming
 import org.eclipse.microprofile.reactive.messaging.Message
 import org.jboss.logging.Logger
-import org.licenta.actions.GuestActions
 import org.licenta.exceptions.MissingFieldException
 import org.licenta.exceptions.UnauthorizedAction
 
@@ -34,14 +30,16 @@ class GatewayWebsocket {
         var guests = 0
     }
 
-    enum class Events {
+    enum class Event {
         REGISTRATION_SUCCESS,
         REGISTRATION_FAIL,
         UPDATE_USER_SUCCESS,
         UPDATE_USER_FAIL,
         LOG_IN_SUCCESS,
         LOG_IN_FAIL,
-        UNAUTHORIZED
+        UNAUTHORIZED,
+        FETCH_USERS_BY_QUERY,
+        FETCH_PROFILE
     }
 
     @Inject
@@ -112,34 +110,43 @@ class GatewayWebsocket {
 
         try {
             if (session != null) {
-                when(Events.valueOf(headers["EVENT"] as String)) {
-                    Events.REGISTRATION_FAIL, Events.UPDATE_USER_FAIL -> {
+                when(Event.valueOf(headers["EVENT"] as String)) {
+                    Event.REGISTRATION_FAIL, Event.UPDATE_USER_FAIL -> {
+                        logger.info("Notifying online user of failed action.")
                         session.asyncRemote.sendText(msg.value())
                     }
-                    Events.REGISTRATION_SUCCESS -> {
+                    Event.REGISTRATION_SUCCESS -> {
                         logger.info("Successful registration from session ${session.id}")
                         session.asyncRemote.sendText("Registration successful! Please log in.")
                     }
-                    Events.UPDATE_USER_SUCCESS -> {
+                    Event.UPDATE_USER_SUCCESS -> {
                         logger.info("Successful profile update from session ${session.id}")
                         val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
                         session.asyncRemote.sendText(gson.toJson(data))
                     }
-                    Events.LOG_IN_SUCCESS -> {
+                    Event.LOG_IN_SUCCESS -> {
                         logger.info("Successful log in from session ${session.id}")
                         session.asyncRemote.sendText(msg.value())
                     }
-                    Events.LOG_IN_FAIL -> {
+                    Event.LOG_IN_FAIL -> {
                         logger.info("Failed log in from session ${session.id}")
                         session.asyncRemote.sendText(msg.value())
                     }
-                    Events.UNAUTHORIZED -> {
+                    Event.UNAUTHORIZED -> {
                         logger.info("An action that requires authorization has failed.")
+                        session.asyncRemote.sendText(msg.value())
+                    }
+                    Event.FETCH_USERS_BY_QUERY -> {
+                        logger.info("A query result has arrived for an user.")
+                        session.asyncRemote.sendText(msg.value())
+                    }
+                    Event.FETCH_PROFILE -> {
+                        logger.info("An user retrieved it's profile.")
                         session.asyncRemote.sendText(msg.value())
                     }
                     else -> {
                         logger.info("TO DO() handle other events")
-                        session.asyncRemote.sendText("TO DO() handle other events")
+                        //session.asyncRemote.sendText("TO DO() handle other events")
                     }
                 }
             } else {

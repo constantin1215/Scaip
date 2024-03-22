@@ -1,4 +1,4 @@
 cd auth-microservice
-./gradlew quarkusBuild
-java -jar build/quarkus-app/quarkus-run.jar
+./gradlew build clean
+./gradlew build -Dquarkus.container-image.build=true -Dquarkus.container-image.image="constatin1215/auth-ms:v1"
 cd ..

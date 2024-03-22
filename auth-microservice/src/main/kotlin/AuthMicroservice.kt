@@ -6,6 +6,7 @@ import exceptions.UserNotFound
 import io.quarkus.elytron.security.common.BcryptUtil
 import io.smallrye.common.annotation.Blocking
 import io.smallrye.jwt.auth.principal.JWTParser
+import io.smallrye.jwt.auth.principal.ParseException
 import io.smallrye.jwt.build.Jwt
 import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata
 import jakarta.enterprise.context.ApplicationScoped
@@ -34,7 +35,9 @@ class AuthMicroservice {
         UPDATE_USER,
         REGISTRATION_SUCCESS,
         UPDATE_USER_SUCCESS,
-        UNAUTHORIZED
+        UNAUTHORIZED,
+        FETCH_USERS_BY_QUERY,
+        FETCH_PROFILE
     }
 
     private val gson = Gson()
@@ -62,7 +65,6 @@ class AuthMicroservice {
     @Transactional
     fun consume(msg: ConsumerRecord<String, String>) {
         val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
-
         val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
         logger.info("Received msg: $headers and $data")
 
@@ -72,67 +74,49 @@ class AuthMicroservice {
         val newHeaders = RecordHeaders()
         headers.forEach { newHeaders.add(it.key, it.value.encodeToByteArray()) }
 
-        when(Event.valueOf(headers["EVENT"] as String)) {
-            Event.LOG_IN -> {
-                logger.info("Performing authentication!")
+        try {
+            when(Event.valueOf(headers["EVENT"] as String)) {
+                Event.LOG_IN -> {
+                    logger.info("Performing authentication!")
 
-                thread {
-                    gatewayEmitter.send(handleLogIn(data, headers, newHeaders))
+                    thread {
+                        gatewayEmitter.send(handleLogIn(data, headers, newHeaders))
+                    }
                 }
-            }
-            Event.REGISTRATION_SUCCESS -> {
-                logger.info("New user")
+                Event.REGISTRATION_SUCCESS -> {
+                    logger.info("New user")
 
-                logger.info(data["id"])
-                logger.info(data["username"])
-                logger.info(data["password"])
+                    if (userRepository.findByUsername(data["username"] as String) != null) {
+                        logger.info("User already exists! This is due to manual changes to DB Rows or stray events.")
+                        return
+                    }
 
-                userRepository.persist(User(
-                    data["id"] as String,
-                    data["username"] as String,
-                    data["password"] as String,
-                ))
+                    userRepository.persist(User(
+                        data["id"] as String,
+                        data["username"] as String,
+                        data["password"] as String,
+                    ))
 
-                logger.info("User in database ${userRepository.findById(data["id"] as String)}")
-            }
-            Event.UPDATE_USER_SUCCESS -> {
-                logger.info("Update user")
-
-                val user = userRepository.findById(data["id"] as String)
-
-                if (user == null) {
-                    logger.info("User with id ${data["id"] as String} not found")
-                } else {
-                    user.username = data["username"] as String
-                    user.password = data["password"] as String
-
-                    userRepository.persist(user);
-
-                    logger.info("User with id ${user.id} successfully updated!")
+                    logger.info("User in database ${userRepository.findById(data["id"] as String)}")
                 }
-            }
-            Event.REGISTER -> {
-                logger.info("Forwarding registration event to dispatch.")
+                Event.UPDATE_USER_SUCCESS -> {
+                    logger.info("Update user")
 
-                val newMsg = Message
-                    .of(gson.toJson(data))
-                    .addMetadata(
-                        OutgoingKafkaRecordMetadata.builder<String>()
-                            .withHeaders(newHeaders).build())
+                    val user = userRepository.findById(data["id"] as String)
 
-                dispatchEmitter.send(newMsg)
-            }
-            else -> {
-                logger.info("Performing authorization and forwarding to dispatch")
+                    if (user == null) {
+                        logger.info("User with id ${data["id"] as String} not found")
+                    } else {
+                        user.username = data["username"] as String
+                        user.password = data["password"] as String
 
-                try {
-                    if (headers["JWT"] == null)
-                        throw JWTNotProvided()
+                        userRepository.persist(user);
 
-                    val jwt = parser.parse(headers["JWT"])
-
-                    data.remove("JWT")
-                    data["id"] = jwt.subject
+                        logger.info("User with id ${user.id} successfully updated!")
+                    }
+                }
+                Event.REGISTER -> {
+                    logger.info("Forwarding registration event to dispatch.")
 
                     val newMsg = Message
                         .of(gson.toJson(data))
@@ -141,23 +125,48 @@ class AuthMicroservice {
                                 .withHeaders(newHeaders).build())
 
                     dispatchEmitter.send(newMsg)
-                } catch (ex : Exception) {
-                    newHeaders.add("EVENT", Event.UNAUTHORIZED.toString().encodeToByteArray())
+                }
+                else -> {
+                    logger.info("Performing authorization and forwarding to dispatch")
 
-                    val message = when(ex) {
-                        is JWTNotProvided -> "You need to be authenticated to perform ${headers["EVENT"]}."
-                        is InvalidJwtException -> "Session invalid, please log in again."
-                        else -> "Something went wrong."
+                    try {
+                        if (headers["JWT"] == null)
+                            throw JWTNotProvided()
+
+                        val jwt = parser.parse(headers["JWT"])
+
+                        data.remove("JWT")
+                        data["userId"] = jwt.subject
+
+                        val newMsg = Message
+                            .of(gson.toJson(data))
+                            .addMetadata(
+                                OutgoingKafkaRecordMetadata.builder<String>()
+                                    .withHeaders(newHeaders).build())
+
+                        dispatchEmitter.send(newMsg)
+                    } catch (ex : Exception) {
+                        logger.warn("${ex.javaClass}  ${ex.message ?: "Exception with no message"}")
+
+                        newHeaders.add("EVENT", Event.UNAUTHORIZED.toString().encodeToByteArray())
+
+                        val message = when(ex) {
+                            is JWTNotProvided -> "You need to be authenticated to perform ${headers["EVENT"]}."
+                            is InvalidJwtException, is ParseException -> "Session invalid, please log in again."
+                            else -> "Something went wrong."
+                        }
+
+                        val newMsg = Message
+                            .of(gson.toJson(mapOf("message" to message)))
+                            .addMetadata(
+                                OutgoingKafkaRecordMetadata.builder<String>()
+                                    .withHeaders(newHeaders).build())
+                        gatewayEmitter.send(newMsg)
                     }
-
-                    val newMsg = Message
-                        .of(gson.toJson(mapOf("message" to message)))
-                        .addMetadata(
-                            OutgoingKafkaRecordMetadata.builder<String>()
-                                .withHeaders(newHeaders).build())
-                    gatewayEmitter.send(newMsg)
                 }
             }
+        } catch (ex : IllegalArgumentException) {
+            logger.warn("Unknown event possibly detected!")
         }
     }
 

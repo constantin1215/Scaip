@@ -50,84 +50,7 @@ class UsersMicroservice {
         logger.info("Received msg: ${msg.key()} and ${msg.value()}")
 
         try {
-            if (isNecessaryData(data)) {
-                when (Event.valueOf(headers["EVENT"] as String)) {
-                    Event.REGISTER -> {
-                        println("Performing registration")
-                        logger.info("Registering user")
-
-                        if (userRepository.existsByEmail(data["email"] as String)) {
-                            logger.info("Email ${data["email"] as String} already exists")
-                            throw EmailAlreadyExists()
-                        }
-
-                        if (userRepository.existsByUsername(data["username"] as String)) {
-                            logger.info("Username ${data["username"] as String} already exists")
-                            throw UsernameAlreadyExists()
-                        }
-
-                        userRepository.persist(
-                            User(
-                                data["username"] as String,
-                                BcryptUtil.bcryptHash(data["password"] as String),
-                                data["email"] as String,
-                                data["firstName"] as String,
-                                data["lastName"] as String
-                            )
-                        )
-
-                        outboxRepository.persist(
-                            UserEvent(
-                                headers["EVENT"] as String,
-                                Event.REGISTRATION_SUCCESS.toString(),
-                                gson.toJson(userRepository.findByUsername(data["username"] as String)),
-                                headers["SESSION_ID"] as String
-                            )
-                        )
-
-                        logger.info("Registered user successfully")
-                    }
-                    Event.UPDATE_USER -> {
-                        logger.info("Performing update")
-                        if (data["id"] == null) {
-                            logger.info("User ID was not provided")
-                            throw IdNotProvided()
-                        }
-
-                        val user = userRepository.findById(data["id"] as String) ?: throw UserDoesNotExist()
-
-                        if (user.email != data["email"] as String && userRepository.existsByEmail(data["email"] as String)) {
-                            logger.info("Provided email already exists!")
-                            throw EmailAlreadyExists()
-                        }
-
-                        if (user.username != data["username"] as String && userRepository.existsByUsername(data["username"] as String)) {
-                            logger.info("Provided username already exists!")
-                            throw UsernameAlreadyExists()
-                        }
-
-                        user.email = data["email"] as String
-                        user.username = data["username"] as String
-                        user.password = BcryptUtil.bcryptHash(data["password"] as String)
-                        user.firstName = data["firstName"] as String
-                        user.lastName = data["lastName"] as String
-
-                        userRepository.persist(user)
-
-                        outboxRepository.persist(
-                            UserEvent(
-                                headers["EVENT"] as String,
-                                Event.UPDATE_USER_SUCCESS.toString(),
-                                gson.toJson(userRepository.findById(data["id"] as String)),
-                                headers["SESSION_ID"] as String
-                            )
-                        )
-
-                        logger.info("User ${user.id} updated successfully!")
-                    }
-                    else -> logger.info("WTF is this(${headers["EVENT"]})!")
-                }
-            } else {
+            if (!isNecessaryData(data)) {
                 logger.info("Data does not contain the necessary fields")
                 outboxRepository.persist(UserEvent(
                     headers["EVENT"] as String,
@@ -136,6 +59,21 @@ class UsersMicroservice {
                     "Missing or malformed fields.",
                     headers["SESSION_ID"] as String
                 ))
+            }
+
+            when (Event.valueOf(headers["EVENT"] as String)) {
+                Event.REGISTER -> {
+                    logger.info("Registering user")
+
+                    handleRegistration(data, headers)
+
+                    logger.info("Registered user successfully")
+                }
+                Event.UPDATE_USER -> {
+                    logger.info("Performing update")
+                    handleUserUpdate(data, headers)
+                }
+                else -> logger.info("WTF is this(${headers["EVENT"]})!")
             }
         } catch (ex : UsernameAlreadyExists) {
             outboxRepository.persist(UserEvent(
@@ -171,6 +109,83 @@ class UsersMicroservice {
                 headers["SESSION_ID"] as String
             ))
         }
+    }
+
+    @Transactional
+    fun handleUserUpdate(
+        data: MutableMap<String, Any>,
+        headers: MutableMap<String, String>
+    ) {
+        if (data["userId"] == null) {
+            logger.info("User ID was not provided")
+            throw IdNotProvided()
+        }
+
+        val user = userRepository.findById(data["userId"] as String) ?: throw UserDoesNotExist()
+
+        if (user.email != data["email"] as String && userRepository.existsByEmail(data["email"] as String)) {
+            logger.info("Provided email already exists!")
+            throw EmailAlreadyExists()
+        }
+
+        if (user.username != data["username"] as String && userRepository.existsByUsername(data["username"] as String)) {
+            logger.info("Provided username already exists!")
+            throw UsernameAlreadyExists()
+        }
+
+        user.email = data["email"] as String
+        user.username = data["username"] as String
+        user.password = BcryptUtil.bcryptHash(data["password"] as String)
+        user.firstName = data["firstName"] as String
+        user.lastName = data["lastName"] as String
+
+        userRepository.persist(user)
+
+        outboxRepository.persist(
+            UserEvent(
+                headers["EVENT"] as String,
+                Event.UPDATE_USER_SUCCESS.toString(),
+                gson.toJson(userRepository.findById(data["userId"] as String)),
+                headers["SESSION_ID"] as String
+            )
+        )
+
+        logger.info("User ${user.id} updated successfully!")
+    }
+
+    @Transactional
+    fun handleRegistration(
+        data: MutableMap<String, Any>,
+        headers: MutableMap<String, String>
+    ) {
+        if (userRepository.existsByEmail(data["email"] as String)) {
+            logger.info("Email ${data["email"] as String} already exists")
+            throw EmailAlreadyExists()
+        }
+
+        if (userRepository.existsByUsername(data["username"] as String)) {
+            logger.info("Username ${data["username"] as String} already exists")
+            throw UsernameAlreadyExists()
+        }
+
+        userRepository.persist(
+            User(
+                data["username"] as String,
+                BcryptUtil.bcryptHash(data["password"] as String),
+                data["email"] as String,
+                data["firstName"] as String,
+                data["lastName"] as String
+            )
+        )
+
+        outboxRepository.persist(
+            UserEvent(
+                headers["EVENT"] as String,
+                Event.REGISTRATION_SUCCESS.toString(),
+                gson.toJson(userRepository.findByUsername(data["username"] as String)),
+                headers["SESSION_ID"] as String
+            )
+        )
     }
 
     private fun isNecessaryData(data: MutableMap<String, Any>): Boolean {

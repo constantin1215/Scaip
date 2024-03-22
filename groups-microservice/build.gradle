@@ -13,11 +13,12 @@ dependencies {
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
     implementation 'io.quarkus:quarkus-smallrye-reactive-messaging-kafka'
     implementation 'io.quarkus:quarkus-kotlin'
-    implementation 'io.quarkus:quarkus-mongodb-panache-kotlin'
+    implementation 'io.quarkus:quarkus-jdbc-postgresql'
+    implementation 'io.quarkus:quarkus-hibernate-orm-panache-kotlin'
+    implementation 'io.quarkus:quarkus-container-image-docker'
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
     implementation 'io.quarkus:quarkus-arc'
     implementation 'com.google.code.gson:gson:2.10.1'
-    implementation 'io.quarkus:quarkus-mongodb-panache-kotlin'
     testImplementation 'io.quarkus:quarkus-junit5'
 }
 

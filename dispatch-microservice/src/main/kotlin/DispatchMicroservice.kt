@@ -19,7 +19,9 @@ class DispatchMicroservice {
         REGISTRATION_SUCCESS,
         REGISTRATION_FAIL,
         UPDATE_USER_SUCCESS,
-        UPDATE_USER_FAIL
+        UPDATE_USER_FAIL,
+        FETCH_USERS_BY_QUERY,
+        FETCH_PROFILE
     }
 
     private val gson = Gson()
@@ -37,6 +39,22 @@ class DispatchMicroservice {
     @Inject
     @Channel("auth_topic")
     lateinit var authEmitter : Emitter<String>
+
+    @Inject
+    @Channel("query_topic")
+    lateinit var queryEmitter : Emitter<String>
+
+    @Inject
+    @Channel("group_topic")
+    lateinit var groupEmitter : Emitter<String>
+
+    @Inject
+    @Channel("message_topic")
+    lateinit var messageEmitter : Emitter<String>
+
+    @Inject
+    @Channel("call_topic")
+    lateinit var callEmitter : Emitter<String>
 
     @Incoming("dispatch_topic")
     fun consume(msg: ConsumerRecord<String, String>) {
@@ -58,6 +76,7 @@ class DispatchMicroservice {
 
             when(Event.valueOf(headers["EVENT"] as String)) {
                 Event.REGISTER, Event.UPDATE_USER -> usersEmitter.send(newMsg)
+                Event.FETCH_USERS_BY_QUERY, Event.FETCH_PROFILE -> queryEmitter.send(newMsg)
                 else -> println("TO DO()")
             }
         } catch (ex : Throwable) {
@@ -104,28 +123,32 @@ class DispatchMicroservice {
             Event.REGISTRATION_SUCCESS -> {
                 logger.info("Successful registration")
 
-                val newMsg = Message
-                    .of(payload)
-                    .addMetadata(
-                        OutgoingKafkaRecordMetadata.builder<String>()
-                            .withHeaders(newHeaders).build())
-
-                authEmitter.send(newMsg)
-                gatewayEmitter.send(newMsg)
+                registrationNotify(payload, newHeaders)
             }
             Event.UPDATE_USER_SUCCESS -> {
                 logger.info("Successful user update")
 
-                val newMsg = Message
-                    .of(payload)
-                    .addMetadata(
-                        OutgoingKafkaRecordMetadata.builder<String>()
-                            .withHeaders(newHeaders).build())
-
-                authEmitter.send(newMsg)
-                gatewayEmitter.send(newMsg)
+                registrationNotify(payload, newHeaders)
             }
             else -> println("TO DO() handle event ${data["generatedevent"]}")
         }
+    }
+
+    private fun registrationNotify(payload: String?, newHeaders: RecordHeaders) {
+        val newMsg = Message
+            .of(payload)
+            .addMetadata(
+                OutgoingKafkaRecordMetadata.builder<String>()
+                    .withHeaders(newHeaders).build()
+            )
+
+        newMsg.withPayload(payload)
+
+        authEmitter.send(newMsg)
+        gatewayEmitter.send(newMsg)
+        queryEmitter.send(newMsg)
+        groupEmitter.send(newMsg)
+        messageEmitter.send(newMsg)
+        callEmitter.send(newMsg)
     }
 }
