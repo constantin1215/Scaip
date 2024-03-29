@@ -59,6 +59,7 @@ class UsersMicroservice {
                     "Missing or malformed fields.",
                     headers["SESSION_ID"] as String
                 ))
+                return
             }
 
             when (Event.valueOf(headers["EVENT"] as String)) {

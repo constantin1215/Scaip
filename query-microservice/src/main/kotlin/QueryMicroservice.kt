@@ -1,20 +1,19 @@
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import entity.Group
 import entity.User
-import entity.UserProfile
 import exceptions.EntityAlreadyInCollection
 import exceptions.NecessaryDataMissing
 import exceptions.UserProfileNotFound
-import io.quarkus.runtime.Startup
 import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.header.internals.RecordHeaders
-import org.bson.types.ObjectId
 import org.eclipse.microprofile.reactive.messaging.*
 import org.jboss.logging.Logger
+import repository.GroupRepository
 import repository.UserRepository
 
 @ApplicationScoped
@@ -25,6 +24,10 @@ class QueryMicroservice {
         FETCH_PROFILE,
         UPDATE_USER_SUCCESS,
         GROUP_CREATION_SUCCESS,
+        CREATE_GROUP_SUCCESS,
+        UPDATE_GROUP_SUCCESS,
+        ADD_MEMBERS_SUCCESS,
+        REMOVE_MEMBERS_SUCCESS
     }
 
     private val gson = Gson()
@@ -35,16 +38,18 @@ class QueryMicroservice {
     lateinit var userRepository: UserRepository
 
     @Inject
+    lateinit var groupRepository: GroupRepository
+
+    @Inject
     @Channel("gateway_topic")
     lateinit var gatewayEmitter : Emitter<String>
 
     @Incoming("query_topic")
-//    @Transactional
+    @Transactional
     fun consume(msg: ConsumerRecord<String, String>) {
         val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
         val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
         logger.info("Received msg: $headers and $data")
-
         try {
             when(Event.valueOf(headers["EVENT"] as String)) {
                 Event.REGISTRATION_SUCCESS -> {
@@ -63,7 +68,23 @@ class QueryMicroservice {
                     logger.info("Fetching profile")
                     handleProfileFetching(data, headers)
                 }
-                else -> { println("TO DO()") }
+                Event.CREATE_GROUP_SUCCESS -> {
+                    logger.info("Assigning new group to users.")
+                    handleNewGroup(data, headers)
+                }
+                Event.UPDATE_GROUP_SUCCESS -> {
+                    logger.info("Updating info for group.")
+                    handleGroupUpdate(data, headers)
+                }
+                Event.ADD_MEMBERS_SUCCESS -> {
+                    logger.info("Assign users to existing group")
+                    handleNewMembersInGroup(data, headers)
+                }
+                Event.REMOVE_MEMBERS_SUCCESS -> {
+                    logger.info("Removing users from existing group")
+                    handleMemberRemovalFromGroup(data, headers)
+                }
+                else -> { println("TO DO() handle ${headers["EVENT"] as String}") }
             }
         } catch (ex : EntityAlreadyInCollection) {
             logger.warn("Entity with ID: ${ex.entityId} already in collection")
@@ -76,6 +97,48 @@ class QueryMicroservice {
         }
     }
 
+    private fun handleMemberRemovalFromGroup(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        throw RuntimeException("Not implemented")
+    }
+
+    private fun handleNewMembersInGroup(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        throw RuntimeException("Not implemented")
+    }
+
+    private fun handleGroupUpdate(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        throw RuntimeException("Not implemented")
+    }
+
+    private fun handleNewGroup(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        logger.info(data)
+        val ownerId = (data["owner"] as Map<String, String>)["id"]
+        val owner = userRepository.findGroupMemberById(ownerId!!)
+            ?: throw UserProfileNotFound(ownerId, headers["EVENT"] as String)
+
+        val members = (data["members"] as ArrayList<Map<String, String>>)
+            .map {
+                val user = userRepository.findGroupMemberById(it["id"]!!)
+                    ?: throw UserProfileNotFound(it["id"]!!, headers["EVENT"] as String)
+                user
+            }.toSet()
+
+        logger.info(members)
+
+        groupRepository.persist(
+            Group(
+                data["id"] as String,
+                owner,
+                data["title"] as String,
+                data["description"] as String,
+                members
+            )
+        )
+
+        logger.info(groupRepository.findById(data["id"] as String))
+
+        throw RuntimeException("Not implemented")
+    }
+
     private fun handleProfileFetching(
         data: MutableMap<String, Any>,
         headers: MutableMap<String, String>
@@ -83,7 +146,7 @@ class QueryMicroservice {
         var result = userRepository.findById(data["userId"] as String) ?: mapOf("message" to "Profile not found!")
 
         if (result is User)
-            result = UserProfile(result)
+            result = result
 
         val newMsg = Message
             .of(gson.toJson(result))

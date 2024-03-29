@@ -14,3 +14,11 @@ cd users-microservice
 ./gradlew build clean
 ./gradlew build -Dquarkus.container-image.build=true -Dquarkus.container-image.image="constatin1215/users-ms:v1"
 cd ..
+cd query-microservice
+./gradlew build clean
+./gradlew build -Dquarkus.container-image.build=true -Dquarkus.container-image.image="constatin1215/query-ms:v1"
+cd ..
+cd groups-microservice
+./gradlew build clean
+./gradlew build -Dquarkus.container-image.build=true -Dquarkus.container-image.image="constatin1215/groups-ms:v1"
+cd ..

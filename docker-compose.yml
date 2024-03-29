@@ -67,14 +67,16 @@ services:
   mongodb-query:
     container_name: 'mongodb-query'
     image: 'mongo:latest'
+    command: ["--replSet", "dbrs", "--bind_ip_all"]
     environment:
       - 'MONGO_INITDB_DATABASE=query'
-      - 'MONGO_INITDB_ROOT_PASSWORD=secret'
-      - 'MONGO_INITDB_ROOT_USERNAME=root'
     ports:
       - '27017:27017'
     expose:
       - '27017'
+    volumes:
+      - ./tmp/db:/data/db
+      - ${PWD}/rs-initiate.js:/docker-entrypoint-initdb.d/rs-initiate.js
   gateway-microservice:
     container_name: "gateway"
     image: constatin1215/gateway-ms:v1
@@ -93,13 +95,24 @@ services:
     image: constatin1215/auth-ms:v1
     links:
       - kafka
-      - postgres-users
+      - postgres-auth
   dispatch-microservice:
     container_name: "dispatch-ms"
     image: constatin1215/dispatch-ms:v1
     links:
       - kafka
-      - postgres-users
+  query-microservice:
+    container_name: "query-ms"
+    image: constatin1215/query-ms:v1
+    links:
+      - kafka
+      - mongodb-query
+  groups-microservice:
+    container_name: "groups-ms"
+    image: constatin1215/groups-ms:v1
+    links:
+      - kafka
+      - postgres-groups
 volumes:
   kafka_data:
     driver: local

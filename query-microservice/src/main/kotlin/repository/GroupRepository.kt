@@ -1,5 +1,6 @@
 package repository
 
+import entity.Group
 import entity.GroupUser
 import entity.SearchedUser
 import entity.User
@@ -8,9 +9,6 @@ import io.quarkus.panache.common.Parameters
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
-class UserRepository : PanacheMongoRepository<User> {
-    fun findByQuery(query : String) = find("{ \$text: { \$search: :query }  }", Parameters.with("query", query))
-        .project(SearchedUser::class.java).list()
+class GroupRepository : PanacheMongoRepository<Group> {
     fun findById(id : String) = find("_id", id).firstResult()
-    fun findGroupMemberById(id : String) = find("_id", id).project(GroupUser::class.java).firstResult()
 }

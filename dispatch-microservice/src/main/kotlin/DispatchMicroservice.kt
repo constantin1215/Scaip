@@ -21,7 +21,19 @@ class DispatchMicroservice {
         UPDATE_USER_SUCCESS,
         UPDATE_USER_FAIL,
         FETCH_USERS_BY_QUERY,
-        FETCH_PROFILE
+        FETCH_PROFILE,
+        CREATE_GROUP,
+        CREATE_GROUP_SUCCESS,
+        CREATE_GROUP_FAIL,
+        ADD_MEMBERS,
+        ADD_MEMBERS_SUCCESS,
+        ADD_MEMBERS_FAIL,
+        REMOVE_MEMBERS,
+        REMOVE_MEMBERS_SUCCESS,
+        REMOVE_MEMBERS_FAIL,
+        UPDATE_GROUP,
+        UPDATE_GROUP_SUCCESS,
+        UPDATE_GROUP_FAIL,
     }
 
     private val gson = Gson()
@@ -75,8 +87,16 @@ class DispatchMicroservice {
                         .withHeaders(newHeaders).build())
 
             when(Event.valueOf(headers["EVENT"] as String)) {
-                Event.REGISTER, Event.UPDATE_USER -> usersEmitter.send(newMsg)
-                Event.FETCH_USERS_BY_QUERY, Event.FETCH_PROFILE -> queryEmitter.send(newMsg)
+                Event.REGISTER,
+                Event.UPDATE_USER -> usersEmitter.send(newMsg)
+
+                Event.FETCH_USERS_BY_QUERY,
+                Event.FETCH_PROFILE -> queryEmitter.send(newMsg)
+
+                Event.CREATE_GROUP,
+                Event.UPDATE_GROUP,
+                Event.ADD_MEMBERS,
+                Event.REMOVE_MEMBERS -> groupEmitter.send(newMsg)
                 else -> println("TO DO()")
             }
         } catch (ex : Throwable) {
@@ -91,12 +111,7 @@ class DispatchMicroservice {
         val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
         logger.info("Consume event from users-microservice Outbox\n $data")
 
-        val parsedData = data["after"].toString()
-            .split(", ")
-            .associate {
-            val (key, value) = it.split('=')
-            key to value
-        }
+        val parsedData = parseData(data)
 
         val event = parsedData["generatedevent"]
         val details = parsedData["details"]
@@ -110,31 +125,101 @@ class DispatchMicroservice {
 
         when(Event.valueOf(event)) {
             Event.REGISTRATION_FAIL, Event.UPDATE_USER_FAIL -> {
-                logger.info("Failed registration, update.")
-
-                val newMsg = Message
-                    .of(gson.toJson(mapOf("message" to details)))
-                    .addMetadata(
-                        OutgoingKafkaRecordMetadata.builder<String>()
-                            .withHeaders(newHeaders).build())
-
-                gatewayEmitter.send(newMsg)
+                logger.info("Failed event response from users-microservice.")
+                notifyOfFailedEvent(details, newHeaders)
             }
-            Event.REGISTRATION_SUCCESS -> {
-                logger.info("Successful registration")
-
-                registrationNotify(payload, newHeaders)
-            }
-            Event.UPDATE_USER_SUCCESS -> {
-                logger.info("Successful user update")
-
-                registrationNotify(payload, newHeaders)
+            Event.REGISTRATION_SUCCESS, Event.UPDATE_USER_SUCCESS -> {
+                logger.info("Successful event response from users-microservice.")
+                notifyOfSuccessfulEvent(
+                    payload,
+                    newHeaders,
+                    authMs = true,
+                    gatewayMs = true,
+                    messageMs = true,
+                    queryMs = true,
+                    groupMs = true,
+                    callMs = true
+                )
             }
             else -> println("TO DO() handle event ${data["generatedevent"]}")
         }
     }
 
-    private fun registrationNotify(payload: String?, newHeaders: RecordHeaders) {
+    @Incoming("groups-microservice.public.Outbox")
+    fun consumeGroupOutbox(msg: ConsumerRecord<String, String>) {
+        val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
+        logger.info("Consume event from groups-microservice Outbox\n $data")
+
+        val parsedData = parseData(data)
+
+        val event = parsedData["generatedevent"]
+        val details = parsedData["details"]
+        val payload = parsedData["data"]
+        val sessionId = parsedData["sessionid"]
+
+//        println(event)
+//        println(payload)
+
+        val newHeaders = RecordHeaders()
+        newHeaders.add("SESSION_ID", sessionId!!.encodeToByteArray())
+        newHeaders.add("EVENT", event!!.encodeToByteArray())
+
+        when (Event.valueOf(event)) {
+            Event.CREATE_GROUP_FAIL,
+            Event.UPDATE_GROUP_FAIL,
+            Event.ADD_MEMBERS_FAIL,
+            Event.REMOVE_MEMBERS_FAIL -> {
+                logger.info("Failed action response from groups-microservice.")
+                notifyOfFailedEvent(details, newHeaders)
+            }
+            Event.CREATE_GROUP_SUCCESS,
+            Event.UPDATE_GROUP_SUCCESS,
+            Event.ADD_MEMBERS_SUCCESS,
+            Event.REMOVE_MEMBERS_SUCCESS -> {
+                notifyOfSuccessfulEvent(
+                    payload,
+                    newHeaders,
+                    gatewayMs = true,
+                    queryMs = true,
+                    messageMs = true,
+                    callMs = true
+                )
+            }
+            else -> println("TO DO() handle event ${data["generatedevent"]}")
+        }
+    }
+
+    private fun notifyOfFailedEvent(details: String?, newHeaders: RecordHeaders) {
+        val newMsg = Message
+            .of(gson.toJson(mapOf("message" to details)))
+            .addMetadata(
+                OutgoingKafkaRecordMetadata.builder<String>()
+                    .withHeaders(newHeaders).build()
+            )
+
+        gatewayEmitter.send(newMsg)
+    }
+
+    private fun parseData(data: MutableMap<String, Any>): Map<String, String> {
+        val parsedData = data["after"].toString()
+            .split(", ")
+            .associate {
+                val (key, value) = it.split('=')
+                key to value
+            }
+        return parsedData
+    }
+
+    private fun notifyOfSuccessfulEvent(
+        payload: String?,
+        newHeaders: RecordHeaders,
+        authMs : Boolean = false,
+        gatewayMs : Boolean = false,
+        queryMs : Boolean = false,
+        groupMs : Boolean = false,
+        messageMs : Boolean = false,
+        callMs : Boolean = false
+    ) {
         val newMsg = Message
             .of(payload)
             .addMetadata(
@@ -144,11 +229,22 @@ class DispatchMicroservice {
 
         newMsg.withPayload(payload)
 
-        authEmitter.send(newMsg)
-        gatewayEmitter.send(newMsg)
-        queryEmitter.send(newMsg)
-        groupEmitter.send(newMsg)
-        messageEmitter.send(newMsg)
-        callEmitter.send(newMsg)
+        if (authMs)
+            authEmitter.send(newMsg)
+
+        if (gatewayMs)
+            gatewayEmitter.send(newMsg)
+
+        if (queryMs)
+            queryEmitter.send(newMsg)
+
+        if (groupMs)
+            groupEmitter.send(newMsg)
+
+        if (messageMs)
+            messageEmitter.send(newMsg)
+
+        if (callMs)
+            callEmitter.send(newMsg)
     }
 }

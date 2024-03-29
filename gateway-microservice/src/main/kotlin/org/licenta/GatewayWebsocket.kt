@@ -39,7 +39,15 @@ class GatewayWebsocket {
         LOG_IN_FAIL,
         UNAUTHORIZED,
         FETCH_USERS_BY_QUERY,
-        FETCH_PROFILE
+        FETCH_PROFILE,
+        CREATE_GROUP_SUCCESS,
+        CREATE_GROUP_FAIL,
+        ADD_MEMBERS_SUCCESS,
+        ADD_MEMBERS_FAIL,
+        REMOVE_MEMBERS_SUCCESS,
+        REMOVE_MEMBERS_FAIL,
+        UPDATE_GROUP_SUCCESS,
+        UPDATE_GROUP_FAIL,
     }
 
     @Inject
@@ -111,44 +119,53 @@ class GatewayWebsocket {
         try {
             if (session != null) {
                 when(Event.valueOf(headers["EVENT"] as String)) {
-                    Event.REGISTRATION_FAIL, Event.UPDATE_USER_FAIL -> {
-                        logger.info("Notifying online user of failed action.")
-                        session.asyncRemote.sendText(msg.value())
+                    Event.REGISTRATION_FAIL,
+                    Event.LOG_IN_FAIL,
+                    Event.UPDATE_USER_FAIL,
+                    Event.ADD_MEMBERS_FAIL,
+                    Event.REMOVE_MEMBERS_FAIL,
+                    Event.CREATE_GROUP_FAIL,
+                    Event.UPDATE_GROUP_FAIL -> {
+                        logger.info("Notifying online user of failed action.(${headers["EVENT"] as String})")
                     }
                     Event.REGISTRATION_SUCCESS -> {
                         logger.info("Successful registration from session ${session.id}")
-                        session.asyncRemote.sendText("Registration successful! Please log in.")
+                        session.asyncRemote.sendText(gson.toJson("message" to "Registration successful! Please log in."))
+                        return
                     }
                     Event.UPDATE_USER_SUCCESS -> {
                         logger.info("Successful profile update from session ${session.id}")
-                        val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
-                        session.asyncRemote.sendText(gson.toJson(data))
                     }
                     Event.LOG_IN_SUCCESS -> {
                         logger.info("Successful log in from session ${session.id}")
-                        session.asyncRemote.sendText(msg.value())
                     }
-                    Event.LOG_IN_FAIL -> {
-                        logger.info("Failed log in from session ${session.id}")
-                        session.asyncRemote.sendText(msg.value())
+                    Event.CREATE_GROUP_SUCCESS -> {
+                        logger.info("Successful creation of group from session ${session.id}")
+                    }
+                    Event.UPDATE_GROUP_SUCCESS -> {
+                        logger.info("Successful group update from session ${session.id}")
+                    }
+                    Event.ADD_MEMBERS_SUCCESS -> {
+                        logger.info("Users successfully added to group by user with session ${session.id}")
+                    }
+                    Event.REMOVE_MEMBERS_SUCCESS -> {
+                        logger.info("Users successfully removed from group by user with session ${session.id}")
                     }
                     Event.UNAUTHORIZED -> {
                         logger.info("An action that requires authorization has failed.")
-                        session.asyncRemote.sendText(msg.value())
                     }
                     Event.FETCH_USERS_BY_QUERY -> {
                         logger.info("A query result has arrived for an user.")
-                        session.asyncRemote.sendText(msg.value())
                     }
                     Event.FETCH_PROFILE -> {
                         logger.info("An user retrieved it's profile.")
-                        session.asyncRemote.sendText(msg.value())
                     }
                     else -> {
                         logger.info("TO DO() handle other events")
                         //session.asyncRemote.sendText("TO DO() handle other events")
                     }
                 }
+                session.asyncRemote.sendText(msg.value())
             } else {
                 logger.info("Session not found! TODO implement this")
                 //TODO Cache response for later or ignore

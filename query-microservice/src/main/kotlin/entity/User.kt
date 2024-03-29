@@ -17,15 +17,16 @@ class User() {
     lateinit var groups : Set<Group>
     lateinit var calls : Set<String>
     lateinit var notifications : Set<String>
-    constructor(id : String,
-                username : String,
-                email : String,
-                firstName : String,
-                lastName : String,
-                pictureId : String,
-                groups : Set<Group>,
-                calls : Set<String>,
-                notifications : Set<String>
+    constructor(
+        id : String,
+        username : String,
+        email : String,
+        firstName : String,
+        lastName : String,
+        pictureId : String,
+        groups : Set<Group>,
+        calls : Set<String>,
+        notifications : Set<String>
     ) : this() {
         this.id = id
         this.username = username

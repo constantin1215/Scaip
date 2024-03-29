@@ -37,7 +37,11 @@ class AuthMicroservice {
         UPDATE_USER_SUCCESS,
         UNAUTHORIZED,
         FETCH_USERS_BY_QUERY,
-        FETCH_PROFILE
+        FETCH_PROFILE,
+        CREATE_GROUP,
+        ADD_MEMBERS,
+        REMOVE_MEMBERS,
+        UPDATE_GROUP,
     }
 
     private val gson = Gson()
