@@ -3,27 +3,38 @@ package entity
 import io.quarkus.mongodb.panache.common.ProjectionFor
 
 @ProjectionFor(User::class)
-class SearchedUser() {
+class UserSummary() {
     lateinit var id : String
     lateinit var username : String
-    lateinit var email : String
     lateinit var firstName : String
     lateinit var lastName : String
-    lateinit var pictureId : String
+    var pictureId : String? = null
 
     constructor(
         id : String,
         username : String,
-        email : String,
         firstName : String,
         lastName : String,
         pictureId : String
     ) : this() {
         this.id = id
         this.username = username
-        this.email = email
         this.firstName = firstName
         this.lastName = lastName
         this.pictureId = pictureId
     }
+
+    constructor(user: User) : this() {
+        this.id = user.id
+        this.username = user.username
+        this.firstName = user.firstName
+        this.lastName = user.lastName
+        this.pictureId = user.pictureId
+    }
+
+    override fun toString(): String {
+        return "UserSummary(id='$id', username='$username', firstName='$firstName', lastName='$lastName', pictureId='$pictureId')"
+    }
+
+
 }

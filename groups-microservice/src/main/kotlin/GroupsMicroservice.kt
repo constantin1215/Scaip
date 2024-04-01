@@ -80,10 +80,6 @@ class GroupsMicroservice {
                     logger.info("Adding new user.")
                     handleNewUser(data)
                 }
-                Event.UPDATE_USER_SUCCESS -> {
-                    logger.info("Updating user.")
-                    handleUserUpdate(data, headers)
-                }
                 else -> {
                     logger.info("TO DO() handle other events")
                 }
@@ -126,10 +122,6 @@ class GroupsMicroservice {
                 ex.message ?: "",
                 headers["SESSION_ID"] as String
             ))
-        } catch (ex : IllegalArgumentException) {
-            logger.warn("Unknown event possibly detected!")
-        } catch (ex : Exception) {
-            logger.warn(ex.message ?: "Error: ${ex.javaClass} with no message")
         }
     }
 
@@ -153,7 +145,7 @@ class GroupsMicroservice {
             GroupEvent(
                 headers["EVENT"] as String,
                 Event.REMOVE_MEMBERS_SUCCESS.toString(),
-                gson.toJson(members),
+                gson.toJson(mapOf("members" to members, "groupId" to data["groupId"] as String)),
                 headers["SESSION_ID"] as String
             )
         )
@@ -182,7 +174,7 @@ class GroupsMicroservice {
             GroupEvent(
                 headers["EVENT"] as String,
                 Event.ADD_MEMBERS_SUCCESS.toString(),
-                gson.toJson(members),
+                gson.toJson(mapOf("members" to members, "groupId" to data["groupId"] as String)),
                 headers["SESSION_ID"] as String
             )
         )
@@ -230,20 +222,20 @@ class GroupsMicroservice {
 
         initialMembers.add(owner)
 
-        groupRepository.persist(
-            Group(
-                owner,
-                data["title"] as String,
-                data["description"] as String,
-                initialMembers
-            )
+        val group = Group(
+            owner,
+            data["title"] as String,
+            data["description"] as String,
+            initialMembers
         )
+
+        groupRepository.persist(group)
 
         outboxRepository.persist(
             GroupEvent(
                 headers["EVENT"] as String,
                 Event.CREATE_GROUP_SUCCESS.toString(),
-                gson.toJson(groupRepository.findByOwner(owner)),
+                gson.toJson(groupRepository.findById(group.id), Group::class.java),
                 headers["SESSION_ID"] as String
             )
         )
@@ -254,40 +246,11 @@ class GroupsMicroservice {
     private fun extractMembers(
         data: MutableMap<String, Any>,
         headers: MutableMap<String, String>
-    ) = (data["members"] as ArrayList<Any>).filter { it != null }.map {
-        val user = gson.fromJson(
-            it.toString()
-                .replace("=", "\":\"")
-                .replace("{", "{\"")
-                .replace("}", "\"}")
-                .replace(", ", "\", \""),
-            User::class.java
-        )
-        if (userRepository.findById(user.id) == null)
-            throw UserNotFound(user.id, headers["EVENT"] as String)
+    ) = (data["members"] as ArrayList<Map<String, String>>).filter { it != null }.map {
+        val user = userRepository.findById(it["id"]!!)
+            ?: throw UserNotFound(it["id"]!!, headers["EVENT"] as String)
         user
     }.toMutableSet()
-
-    private fun handleUserUpdate(
-        data: MutableMap<String, Any>,
-        headers: MutableMap<String, String>
-    ) {
-        if (!isNecessaryData(data))
-            throw NecessaryDataMissing()
-
-        val user = userRepository.findById(data["id"] as String) ?: throw UserNotFound(
-            data["id"] as String,
-            headers["EVENT"] as String
-        )
-
-        user.username = data["username"] as String
-        user.firstName = data["firstName"] as String
-        user.lastName = data["lastName"] as String
-
-        userRepository.persist(user)
-
-        logger.info("User successfully updated.")
-    }
 
     private fun handleNewUser(data: MutableMap<String, Any>) {
         if (!isNecessaryData(data))
@@ -298,10 +261,7 @@ class GroupsMicroservice {
 
         userRepository.persist(
             User(
-                data["id"] as String,
-                data["username"] as String,
-                data["firstName"] as String,
-                data["lastName"] as String,
+                data["id"] as String
             )
         )
 
@@ -309,10 +269,7 @@ class GroupsMicroservice {
     }
 
     private fun isNecessaryData(data: MutableMap<String, Any>): Boolean {
-        return data["id"] != null &&
-                data["username"] != null &&
-                data["firstName"] != null &&
-                data["lastName"] != null
+        return data["id"] != null
     }
 
     private fun getFailedEvent(event : String) : Event {

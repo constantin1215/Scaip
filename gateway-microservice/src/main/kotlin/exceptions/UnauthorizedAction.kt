@@ -1,3 +1,3 @@
-package org.licenta.exceptions
+package exceptions
 
 class UnauthorizedAction(msg : String) : RuntimeException(msg)

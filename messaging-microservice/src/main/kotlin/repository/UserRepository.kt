@@ -1,10 +1,10 @@
 package repository
 
-import entity.Group
+import entity.User
 import io.quarkus.mongodb.panache.kotlin.PanacheMongoRepository
 import jakarta.enterprise.context.ApplicationScoped
 
 @ApplicationScoped
-class GroupRepository : PanacheMongoRepository<Group> {
+class UserRepository : PanacheMongoRepository<User> {
     fun findById(id : String) = find("_id", id).firstResult()
 }

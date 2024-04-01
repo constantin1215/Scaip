@@ -34,6 +34,10 @@ class DispatchMicroservice {
         UPDATE_GROUP,
         UPDATE_GROUP_SUCCESS,
         UPDATE_GROUP_FAIL,
+        NEW_MESSAGE,
+        NEW_MESSAGE_SUCCESS,
+        NEW_MESSAGE_FAIL,
+        FETCH_MESSAGES,
     }
 
     private val gson = Gson()
@@ -97,6 +101,10 @@ class DispatchMicroservice {
                 Event.UPDATE_GROUP,
                 Event.ADD_MEMBERS,
                 Event.REMOVE_MEMBERS -> groupEmitter.send(newMsg)
+
+                Event.NEW_MESSAGE,
+                Event.FETCH_MESSAGES -> messageEmitter.send(newMsg)
+
                 else -> println("TO DO()")
             }
         } catch (ex : Throwable) {
@@ -116,7 +124,7 @@ class DispatchMicroservice {
         val event = parsedData["generatedevent"]
         val details = parsedData["details"]
         val payload = parsedData["data"]
-        val sessionId = parsedData["sessionid"]!!.dropLast(1)
+        val sessionId = parsedData["sessionid"]!!
         logger.info(payload)
 
         val newHeaders = RecordHeaders()
@@ -128,8 +136,8 @@ class DispatchMicroservice {
                 logger.info("Failed event response from users-microservice.")
                 notifyOfFailedEvent(details, newHeaders)
             }
-            Event.REGISTRATION_SUCCESS, Event.UPDATE_USER_SUCCESS -> {
-                logger.info("Successful event response from users-microservice.")
+            Event.REGISTRATION_SUCCESS -> {
+                logger.info("Successful registration event from users-microservice.")
                 notifyOfSuccessfulEvent(
                     payload,
                     newHeaders,
@@ -139,6 +147,16 @@ class DispatchMicroservice {
                     queryMs = true,
                     groupMs = true,
                     callMs = true
+                )
+            }
+            Event.UPDATE_USER_SUCCESS -> {
+                logger.info("Successful update event from users-microservice.")
+                notifyOfSuccessfulEvent(
+                    payload,
+                    newHeaders,
+                    authMs = true,
+                    gatewayMs = true,
+                    queryMs = true
                 )
             }
             else -> println("TO DO() handle event ${data["generatedevent"]}")

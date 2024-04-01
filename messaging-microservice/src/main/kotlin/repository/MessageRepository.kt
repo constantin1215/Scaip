@@ -1,0 +1,4 @@
+package repository
+
+class MessageRepository {
+}

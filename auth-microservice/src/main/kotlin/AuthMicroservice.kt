@@ -42,6 +42,10 @@ class AuthMicroservice {
         ADD_MEMBERS,
         REMOVE_MEMBERS,
         UPDATE_GROUP,
+        NEW_MESSAGE,
+        NEW_MESSAGE_SUCCESS,
+        NEW_MESSAGE_FAIL,
+        FETCH_MESSAGES,
     }
 
     private val gson = Gson()

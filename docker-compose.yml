@@ -77,40 +77,59 @@ services:
     volumes:
       - ./tmp/db:/data/db
       - ${PWD}/rs-initiate.js:/docker-entrypoint-initdb.d/rs-initiate.js
+  mongodb-messages:
+    container_name: 'mongodb-messages'
+    image: 'mongo:latest'
+    command: [ "--replSet", "dbrs", "--bind_ip_all" ]
+    environment:
+      - 'MONGO_INITDB_DATABASE=messages'
+    ports:
+      - '27018:27017'
+    expose:
+      - '27018'
+    volumes:
+      - ./tmp2/db:/data/db
+      - ${PWD}/rs-initiate.js:/docker-entrypoint-initdb.d/rs-initiate.js
+  redis-gateway:
+    container_name: 'redis-gateway'
+    image: redis:latest
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning
   gateway-microservice:
     container_name: "gateway"
     image: constatin1215/gateway-ms:v1
     ports:
       - "8080:8080"
-    links:
+    depends_on:
       - kafka
   users-microservice:
     container_name: "users-ms"
     image: constatin1215/users-ms:v1
-    links:
+    depends_on:
       - kafka
       - postgres-users
   auth-microservice:
     container_name: "auth-ms"
     image: constatin1215/auth-ms:v1
-    links:
+    depends_on:
       - kafka
       - postgres-auth
   dispatch-microservice:
     container_name: "dispatch-ms"
     image: constatin1215/dispatch-ms:v1
-    links:
+    depends_on:
       - kafka
   query-microservice:
     container_name: "query-ms"
     image: constatin1215/query-ms:v1
-    links:
+    depends_on:
       - kafka
       - mongodb-query
   groups-microservice:
     container_name: "groups-ms"
     image: constatin1215/groups-ms:v1
-    links:
+    depends_on:
       - kafka
       - postgres-groups
 volumes:

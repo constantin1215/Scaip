@@ -65,14 +65,13 @@ class UsersMicroservice {
             when (Event.valueOf(headers["EVENT"] as String)) {
                 Event.REGISTER -> {
                     logger.info("Registering user")
-
                     handleRegistration(data, headers)
-
                     logger.info("Registered user successfully")
                 }
                 Event.UPDATE_USER -> {
                     logger.info("Performing update")
                     handleUserUpdate(data, headers)
+                    logger.info("User updates successfully")
                 }
                 else -> logger.info("WTF is this(${headers["EVENT"]})!")
             }
@@ -112,7 +111,7 @@ class UsersMicroservice {
         }
     }
 
-    @Transactional
+
     fun handleUserUpdate(
         data: MutableMap<String, Any>,
         headers: MutableMap<String, String>
@@ -154,7 +153,7 @@ class UsersMicroservice {
         logger.info("User ${user.id} updated successfully!")
     }
 
-    @Transactional
+
     fun handleRegistration(
         data: MutableMap<String, Any>,
         headers: MutableMap<String, String>
