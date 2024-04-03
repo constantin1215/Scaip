@@ -2,6 +2,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import entity.Group
 import entity.Message
+import entity.MessageEvent
 import entity.User
 import exceptions.*
 import jakarta.enterprise.context.ApplicationScoped
@@ -11,6 +12,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.eclipse.microprofile.reactive.messaging.Incoming
 import org.jboss.logging.Logger
 import repository.GroupRepository
+import repository.OutboxRepository
 import repository.UserRepository
 
 @ApplicationScoped
@@ -22,6 +24,8 @@ class MessagingMicroservice {
         ADD_MEMBERS_SUCCESS,
         REMOVE_MEMBERS_SUCCESS,
         NEW_MESSAGE,
+        NEW_MESSAGE_SUCCESS,
+        NEW_MESSAGE_FAIL,
         FETCH_MESSAGES,
         UNAUTHORIZED
     }
@@ -35,6 +39,9 @@ class MessagingMicroservice {
 
     @Inject
     lateinit var groupRepository: GroupRepository
+
+    @Inject
+    lateinit var outboxRepository: OutboxRepository
 
     @Incoming("message_topic")
     @Transactional
@@ -91,6 +98,15 @@ class MessagingMicroservice {
         group.messages.add(newMessage)
 
         groupRepository.update(group)
+
+        outboxRepository.persist(
+            MessageEvent(
+                headers["EVENT"] as String,
+                Event.NEW_MESSAGE_SUCCESS.toString(),
+                newMessage,
+                headers["SESSION_ID"] as String
+            )
+        )
 
         logger.info("Message successfully added to conversation.")
     }

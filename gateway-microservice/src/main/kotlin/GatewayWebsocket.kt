@@ -3,10 +3,13 @@ import com.google.gson.reflect.TypeToken
 import exceptions.MissingFieldException
 import exceptions.UnauthorizedAction
 import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata
+import io.vertx.core.Vertx
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.websocket.*
 import jakarta.websocket.server.ServerEndpoint
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.eclipse.microprofile.reactive.messaging.Channel
@@ -66,17 +69,22 @@ class GatewayWebsocket {
         logger.info("connection> ${session!!.id}")
         session.asyncRemote.sendText("guest" + ++guestCount)
         sessions[session.id] = session
-        storageService.setString("SESSION:${session.id}", "guest$guestCount", 120)
+        thread {
+            storageService.setString("SESSION:${session.id}", "guest$guestCount", 120)
+        }.join()
     }
 
     @OnClose
     fun onClose(session: Session?) {
         logger.info("exit> ${session!!.id}")
         sessions.remove(session.id)
-        val value = storageService.getString("SESSION:${session.id}")
-        if (storageService.keyExists("USER:$value"))
-            storageService.deleteKey("USER:$value")
-        storageService.deleteKey("SESSION:${session.id}")
+
+        thread {
+            val value = storageService.getString("SESSION:${session.id}")
+            if (storageService.keyExists("USER:$value"))
+                storageService.deleteKey("USER:$value")
+            storageService.deleteKey("SESSION:${session.id}")
+        }.join()
     }
 
     @OnError
@@ -146,7 +154,7 @@ class GatewayWebsocket {
                     return@thread
                 }
                 handleEvent(headers, session, data, msg)
-            }
+            }.join()
         } catch (ex : Exception) {
             logger.info("Encountered undefined event")
         }
@@ -217,7 +225,10 @@ class GatewayWebsocket {
                 storageService.setString("SESSION:$session", data["id"] as String, 7200)
                 storageService.setString("USER:${data["id"] as String}", session, 7200)
             }
-
+            Event.NEW_MESSAGE_SUCCESS -> {
+                logger.info("A new message chat messages has been received.")
+                logger.info(data)
+            }
             else -> {
                 logger.info("TO DO() handle other events")
                 //session.asyncRemote.sendText("TO DO() handle other events")
