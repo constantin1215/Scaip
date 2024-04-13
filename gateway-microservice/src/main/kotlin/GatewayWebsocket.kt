@@ -1,7 +1,11 @@
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import exceptions.MissingFieldException
+import exceptions.SessionExpired
 import exceptions.UnauthorizedAction
+import io.quarkus.runtime.Shutdown
+import io.quarkus.runtime.Startup
+import io.smallrye.common.annotation.RunOnVirtualThread
 import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata
 import io.vertx.core.Vertx
 import jakarta.enterprise.context.ApplicationScoped
@@ -10,6 +14,7 @@ import jakarta.websocket.*
 import jakarta.websocket.server.ServerEndpoint
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.header.internals.RecordHeaders
 import org.eclipse.microprofile.reactive.messaging.Channel
@@ -55,6 +60,10 @@ class GatewayWebsocket {
         NEW_MESSAGE_SUCCESS,
         NEW_MESSAGE_FAIL,
         FETCH_MESSAGES,
+        NEW_CALL,
+        NEW_CALL_SUCCESS,
+        NEW_CALL_FAIL,
+        JOIN_CALL,
     }
 
     @Inject
@@ -64,14 +73,25 @@ class GatewayWebsocket {
     @Channel("auth_topic")
     lateinit var emitter : Emitter<String>
 
+    @Startup
+    fun startup() {
+        logger.info("Cleaning up Redis.")
+        storageService.deleteKeys("SESSION:*")
+        storageService.deleteKeys("USER:*")
+    }
+
     @OnOpen
     fun onOpen(session: Session?) {
         logger.info("connection> ${session!!.id}")
         session.asyncRemote.sendText("guest" + ++guestCount)
         sessions[session.id] = session
-        thread {
+        recordSession(session)
+    }
+
+    private fun recordSession(session: Session) {
+        Vertx.vertx().executeBlocking { ->
             storageService.setString("SESSION:${session.id}", "guest$guestCount", 120)
-        }.join()
+        }
     }
 
     @OnClose
@@ -79,12 +99,16 @@ class GatewayWebsocket {
         logger.info("exit> ${session!!.id}")
         sessions.remove(session.id)
 
-        thread {
+        removeSession(session)
+    }
+
+    private fun removeSession(session: Session) {
+        Vertx.vertx().executeBlocking { ->
             val value = storageService.getString("SESSION:${session.id}")
             if (storageService.keyExists("USER:$value"))
                 storageService.deleteKey("USER:$value")
             storageService.deleteKey("SESSION:${session.id}")
-        }.join()
+        }
     }
 
     @OnError
@@ -100,6 +124,7 @@ class GatewayWebsocket {
 
     @OnMessage
     fun onMessage(session: Session?, message: String?) {
+        checkExpiredSession(session)
         if(message.isNullOrBlank()) {
             logger.warn("Received empty or null message.")
             return
@@ -131,6 +156,15 @@ class GatewayWebsocket {
         emitter.send(msg)
     }
 
+    private fun checkExpiredSession(session: Session?) {
+        Vertx.vertx().executeBlocking { ->
+            if (!storageService.keyExists("SESSION:${session!!.id}")) {
+                sessions[session.id]!!.asyncRemote.sendText(gson.toJson(mapOf("message" to "Session expired please reconnect!")))
+                sessions[session.id]!!.close()
+            }
+        }
+    }
+
     @Incoming("gateway_topic")
     fun consume(msg: ConsumerRecord<String, String>) {
         var value = msg.value()
@@ -144,20 +178,7 @@ class GatewayWebsocket {
         logger.info("Received msg: $headers and ${msg.value()}")
 
         val session = headers["SESSION_ID"] as String
-
-        try {
-            thread {
-                if (!storageService.keyExists("SESSION:$session")) {
-                    sessions[session]!!.asyncRemote.sendText(gson.toJson(mapOf("message" to "Session expired please reconnect!")))
-                    sessions[session]!!.close()
-                    sessions.remove(session)
-                    return@thread
-                }
-                handleEvent(headers, session, data, msg)
-            }.join()
-        } catch (ex : Exception) {
-            logger.info("Encountered undefined event")
-        }
+        handleEvent(headers, session, data, msg)
     }
 
     private fun handleEvent(
@@ -166,75 +187,98 @@ class GatewayWebsocket {
         data: MutableMap<String, Any>,
         msg: ConsumerRecord<String, String>
     ) {
-        when (Event.valueOf(headers["EVENT"] as String)) {
-            Event.REGISTRATION_FAIL,
-            Event.LOG_IN_FAIL,
-            Event.UPDATE_USER_FAIL,
-            Event.ADD_MEMBERS_FAIL,
-            Event.REMOVE_MEMBERS_FAIL,
-            Event.CREATE_GROUP_FAIL,
-            Event.UPDATE_GROUP_FAIL -> {
-                logger.info("Notifying online user of failed action.(${headers["EVENT"] as String})")
-            }
+        Vertx.vertx().executeBlocking { ->
+            when (Event.valueOf(headers["EVENT"] as String)) {
+                Event.REGISTRATION_FAIL,
+                Event.LOG_IN_FAIL,
+                Event.UPDATE_USER_FAIL,
+                Event.ADD_MEMBERS_FAIL,
+                Event.REMOVE_MEMBERS_FAIL,
+                Event.CREATE_GROUP_FAIL,
+                Event.UPDATE_GROUP_FAIL -> {
+                    logger.info("Notifying online user of failed action.(${headers["EVENT"] as String})")
+                }
 
-            Event.REGISTRATION_SUCCESS -> {
-                logger.info("Successful registration from session $session")
-            }
+                Event.REGISTRATION_SUCCESS -> {
+                    logger.info("Successful registration from session $session")
+                }
 
-            Event.UPDATE_USER_SUCCESS -> {
-                logger.info("Successful profile update from session $session")
-            }
+                Event.UPDATE_USER_SUCCESS -> {
+                    logger.info("Successful profile update from session $session")
+                }
 
-            Event.LOG_IN_SUCCESS -> {
-                logger.info("Successful log in from session $session")
-            }
+                Event.LOG_IN_SUCCESS -> {
+                    logger.info("Successful log in from session $session")
+                }
 
-            Event.CREATE_GROUP_SUCCESS -> {
-                logger.info("Successful creation of group event received.")
-                storageService.addGroup(data["id"] as String)
-                val members = (data["members"] as ArrayList<Map<String, String>>).map { it["id"]!! }.toSet()
-                storageService.addToSet("GROUP:${data["id"] as String}", members)
-            }
+                Event.CREATE_GROUP_SUCCESS -> {
+                    logger.info("Successful creation of group event received.")
+                    storageService.addGroup(data["id"] as String)
+                    val members = (data["members"] as ArrayList<Map<String, String>>).map { it["id"]!! }.toSet()
+                    storageService.addToSet("GROUP:${data["id"] as String}", members)
+                }
 
-            Event.UPDATE_GROUP_SUCCESS -> {
-                logger.info("Successful group update from session $session")
-            }
+                Event.UPDATE_GROUP_SUCCESS -> {
+                    logger.info("Successful group update from session $session")
+                }
 
-            Event.ADD_MEMBERS_SUCCESS -> {
-                logger.info("Users successfully added to group by user with session $session")
-                val members = (data["members"] as ArrayList<Map<String, String>>).map { it["id"]!! }.toSet()
-                storageService.addToSet("GROUP:${data["groupId"] as String}", members)
-            }
+                Event.ADD_MEMBERS_SUCCESS -> {
+                    logger.info("Users successfully added to group by user with session $session")
+                    val members = (data["members"] as ArrayList<Map<String, String>>).map { it["id"]!! }.toSet()
+                    storageService.addToSet("GROUP:${data["groupId"] as String}", members)
+                }
 
-            Event.REMOVE_MEMBERS_SUCCESS -> {
-                logger.info("Users successfully removed from group by user with session $session")
-                val members = (data["members"] as ArrayList<Map<String, String>>).map { it["id"]!! }.toSet()
-                storageService.removeFromSet("GROUP:${data["groupId"] as String}", members)
-            }
+                Event.REMOVE_MEMBERS_SUCCESS -> {
+                    logger.info("Users successfully removed from group by user with session $session")
+                    val members = (data["members"] as ArrayList<Map<String, String>>).map { it["id"]!! }.toSet()
+                    storageService.removeFromSet("GROUP:${data["groupId"] as String}", members)
+                }
 
-            Event.UNAUTHORIZED -> {
-                logger.info("An action that requires authorization has failed for an user with session $session.")
-            }
+                Event.UNAUTHORIZED -> {
+                    logger.info("An action that requires authorization has failed for an user with session $session.")
+                }
 
-            Event.FETCH_USERS_BY_QUERY -> {
-                logger.info("A query result has arrived for an user with session $session.")
-            }
+                Event.FETCH_USERS_BY_QUERY -> {
+                    logger.info("A query result has arrived for an user with session $session.")
+                }
 
-            Event.FETCH_PROFILE -> {
-                logger.info("An user with session $session retrieved it's profile.")
-                storageService.setString("SESSION:$session", data["id"] as String, 7200)
-                storageService.setString("USER:${data["id"] as String}", session, 7200)
-            }
-            Event.NEW_MESSAGE_SUCCESS -> {
-                logger.info("A new message chat messages has been received.")
-                logger.info(data)
-            }
-            else -> {
-                logger.info("TO DO() handle other events")
-                //session.asyncRemote.sendText("TO DO() handle other events")
+                Event.FETCH_PROFILE -> {
+                    logger.info("An user with session $session retrieved it's profile.")
+                    storageService.setString("SESSION:$session", data["id"] as String, 7200)
+                    storageService.setString("USER:${data["id"] as String}", session, 7200)
+                }
 
+                Event.NEW_MESSAGE_SUCCESS,
+                Event.NEW_CALL_SUCCESS -> {
+                    logger.info("A new message/call has been received.")
+                    if (storageService.groupExists(data["groupId"] as String)) {
+                        logger.info("New message in ${data["groupId"]}")
+                        val members = storageService.getSet("GROUP:${data["groupId"]}")
+                        for (member in members) {
+                            val memberSession = storageService.getString("USER:$member")
+                            logger.info("Member session: $memberSession")
+                            if (memberSession != null) {
+                                logger.info("Sending message to $memberSession")
+                                sessions[memberSession]!!.asyncRemote.sendText(msg.value())
+                            }
+                        }
+                        return@executeBlocking
+                    }
+                }
+
+                Event.FETCH_MESSAGES -> {
+                    logger.info("An user fetched a conversation.")
+                    logger.info(data)
+                }
+
+                else -> {
+                    logger.info("TO DO() handle other events")
+                    //session.asyncRemote.sendText("TO DO() handle other events")
+
+                }
             }
+            if (sessions[session] != null)
+                sessions[session]!!.asyncRemote.sendText(msg.value())
         }
-        sessions[session]!!.asyncRemote.sendText(msg.value())
     }
 }

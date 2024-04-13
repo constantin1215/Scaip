@@ -11,6 +11,7 @@ class Group() {
     lateinit var title : String
     lateinit var description : String
     lateinit var members : MutableSet<UserSummary>
+    var lastMessage : Message? = null
 
     constructor(
         id : String,

@@ -46,6 +46,10 @@ class AuthMicroservice {
         NEW_MESSAGE_SUCCESS,
         NEW_MESSAGE_FAIL,
         FETCH_MESSAGES,
+        NEW_CALL,
+        NEW_CALL_SUCCESS,
+        NEW_CALL_FAIL,
+        JOIN_CALL,
     }
 
     private val gson = Gson()
@@ -86,53 +90,22 @@ class AuthMicroservice {
             when(Event.valueOf(headers["EVENT"] as String)) {
                 Event.LOG_IN -> {
                     logger.info("Performing authentication!")
-
                     thread {
                         gatewayEmitter.send(handleLogIn(data, headers, newHeaders))
-                    }
+                    }.join()
                 }
                 Event.REGISTRATION_SUCCESS -> {
                     logger.info("New user")
-
-                    if (userRepository.findByUsername(data["username"] as String) != null) {
-                        logger.info("User already exists! This is due to manual changes to DB Rows or stray events.")
-                        return
-                    }
-
-                    userRepository.persist(User(
-                        data["id"] as String,
-                        data["username"] as String,
-                        data["password"] as String,
-                    ))
-
-                    logger.info("User in database ${userRepository.findById(data["id"] as String)}")
+                    handleNewUser(data)
                 }
                 Event.UPDATE_USER_SUCCESS -> {
                     logger.info("Update user")
-
-                    val user = userRepository.findById(data["id"] as String)
-
-                    if (user == null) {
-                        logger.info("User with id ${data["id"] as String} not found")
-                    } else {
-                        user.username = data["username"] as String
-                        user.password = data["password"] as String
-
-                        userRepository.persist(user);
-
-                        logger.info("User with id ${user.id} successfully updated!")
-                    }
+                    handleUserUpdate(data)
                 }
                 Event.REGISTER -> {
                     logger.info("Forwarding registration event to dispatch.")
 
-                    val newMsg = Message
-                        .of(gson.toJson(data))
-                        .addMetadata(
-                            OutgoingKafkaRecordMetadata.builder<String>()
-                                .withHeaders(newHeaders).build())
-
-                    dispatchEmitter.send(newMsg)
+                    forwardToDispatch(data, newHeaders)
                 }
                 else -> {
                     logger.info("Performing authorization and forwarding to dispatch")
@@ -146,13 +119,8 @@ class AuthMicroservice {
                         data.remove("JWT")
                         data["userId"] = jwt.subject
 
-                        val newMsg = Message
-                            .of(gson.toJson(data))
-                            .addMetadata(
-                                OutgoingKafkaRecordMetadata.builder<String>()
-                                    .withHeaders(newHeaders).build())
+                        forwardToDispatch(data, newHeaders)
 
-                        dispatchEmitter.send(newMsg)
                     } catch (ex : Exception) {
                         logger.warn("${ex.javaClass}  ${ex.message ?: "Exception with no message"}")
 
@@ -176,6 +144,53 @@ class AuthMicroservice {
         } catch (ex : IllegalArgumentException) {
             logger.warn("Unknown event possibly detected!")
         }
+    }
+
+    private fun forwardToDispatch(
+        data: MutableMap<String, Any>,
+        newHeaders: RecordHeaders
+    ) {
+        val newMsg = Message
+            .of(gson.toJson(data))
+            .addMetadata(
+                OutgoingKafkaRecordMetadata.builder<String>()
+                    .withHeaders(newHeaders).build()
+            )
+
+        dispatchEmitter.send(newMsg)
+    }
+
+    private fun handleUserUpdate(data: MutableMap<String, Any>) {
+        val user = userRepository.findById(data["id"] as String)
+
+        if (user == null) {
+            logger.info("User with id ${data["id"] as String} not found")
+            return
+        }
+
+        user.username = data["username"] as String
+        user.password = data["password"] as String
+
+        userRepository.persist(user);
+
+        logger.info("User with id ${user.id} successfully updated!")
+    }
+
+    private fun handleNewUser(data: MutableMap<String, Any>) {
+        if (userRepository.findByUsername(data["username"] as String) != null) {
+            logger.info("User already exists! This is due to manual changes to DB Rows or stray events.")
+            return
+        }
+
+        userRepository.persist(
+            User(
+                data["id"] as String,
+                data["username"] as String,
+                data["password"] as String,
+            )
+        )
+
+        logger.info("User added in database.")
     }
 
     @Transactional

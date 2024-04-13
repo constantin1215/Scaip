@@ -90,6 +90,19 @@ services:
     volumes:
       - ./tmp2/db:/data/db
       - ${PWD}/rs-initiate.js:/docker-entrypoint-initdb.d/rs-initiate.js
+  mongodb-calls:
+    container_name: 'mongodb-calls'
+    image: 'mongo:latest'
+    command: [ "--replSet", "dbrs", "--bind_ip_all" ]
+    environment:
+      - 'MONGO_INITDB_DATABASE=calls'
+    ports:
+      - '27019:27017'
+    expose:
+      - '27019'
+    volumes:
+      - ./tmp3/db:/data/db
+      - ${PWD}/rs-initiate.js:/docker-entrypoint-initdb.d/rs-initiate.js
   redis-gateway:
     container_name: 'redis-gateway'
     image: redis:latest
@@ -132,6 +145,12 @@ services:
     depends_on:
       - kafka
       - postgres-groups
+  messaging-microservice:
+    container_name: "messaging-ms"
+    image: constatin1215/messaging-ms:v1
+    depends_on:
+      - kafka
+      - mongodb-messages
 volumes:
   kafka_data:
     driver: local

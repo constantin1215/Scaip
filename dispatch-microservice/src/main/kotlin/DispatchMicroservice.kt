@@ -1,4 +1,5 @@
 import com.google.gson.Gson
+import com.google.gson.internal.LinkedTreeMap
 import com.google.gson.reflect.TypeToken
 import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata
 import jakarta.enterprise.context.ApplicationScoped
@@ -10,6 +11,7 @@ import org.eclipse.microprofile.reactive.messaging.Emitter
 import org.eclipse.microprofile.reactive.messaging.Incoming
 import org.eclipse.microprofile.reactive.messaging.Message
 import org.jboss.logging.Logger
+import kotlin.reflect.typeOf
 
 @ApplicationScoped
 class DispatchMicroservice {
@@ -38,6 +40,10 @@ class DispatchMicroservice {
         NEW_MESSAGE_SUCCESS,
         NEW_MESSAGE_FAIL,
         FETCH_MESSAGES,
+        NEW_CALL,
+        NEW_CALL_SUCCESS,
+        NEW_CALL_FAIL,
+        JOIN_CALL,
     }
 
     private val gson = Gson()
@@ -105,6 +111,9 @@ class DispatchMicroservice {
                 Event.NEW_MESSAGE,
                 Event.FETCH_MESSAGES -> messageEmitter.send(newMsg)
 
+                Event.NEW_CALL,
+                Event.JOIN_CALL -> callEmitter.send(newMsg)
+
                 else -> println("TO DO()")
             }
         } catch (ex : Throwable) {
@@ -125,11 +134,8 @@ class DispatchMicroservice {
         val details = parsedData["details"]
         val payload = parsedData["data"]
         val sessionId = parsedData["sessionid"]!!
-        logger.info(payload)
 
-        val newHeaders = RecordHeaders()
-        newHeaders.add("SESSION_ID", sessionId.encodeToByteArray())
-        newHeaders.add("EVENT", event!!.encodeToByteArray())
+        val newHeaders = createHeaders(sessionId, event!!)
 
         when(Event.valueOf(event)) {
             Event.REGISTRATION_FAIL, Event.UPDATE_USER_FAIL -> {
@@ -159,7 +165,7 @@ class DispatchMicroservice {
                     queryMs = true
                 )
             }
-            else -> println("TO DO() handle event ${data["generatedevent"]}")
+            else -> println("TO DO() handle event $event")
         }
     }
 
@@ -178,9 +184,7 @@ class DispatchMicroservice {
 //        println(event)
 //        println(payload)
 
-        val newHeaders = RecordHeaders()
-        newHeaders.add("SESSION_ID", sessionId!!.encodeToByteArray())
-        newHeaders.add("EVENT", event!!.encodeToByteArray())
+        val newHeaders = createHeaders(sessionId!!, event!!)
 
         when (Event.valueOf(event)) {
             Event.CREATE_GROUP_FAIL,
@@ -203,8 +207,75 @@ class DispatchMicroservice {
                     callMs = true
                 )
             }
-            else -> println("TO DO() handle event ${data["generatedevent"]}")
+            else -> println("TO DO() handle event $event")
         }
+    }
+
+    @Incoming("messages-microservice.messages.Outbox")
+    fun consumeMessagesOutbox(msg: ConsumerRecord<String, String>) {
+        logger.info("Consume event from groups-microservice Outbox")
+
+        val (event, details, payload, sessionId) = extractData(msg);
+        val newHeaders = createHeaders(sessionId, event)
+
+        when(Event.valueOf(event)) {
+            Event.NEW_MESSAGE_FAIL -> notifyOfFailedEvent(details, newHeaders)
+            Event.NEW_MESSAGE_SUCCESS -> notifyOfSuccessfulEvent(
+                payload,
+                newHeaders,
+                gatewayMs = true,
+                queryMs = true
+            )
+            else -> println("TO DO() handle event $event")
+        }
+    }
+
+    @Incoming("calls-microservice.calls.Outbox")
+    fun consumeCallsOutbox(msg: ConsumerRecord<String, String>) {
+        logger.info("Consume event from groups-microservice Outbox")
+
+        val (event, details, payload, sessionId) = extractData(msg);
+
+        val newHeaders = createHeaders(sessionId, event)
+
+        when(Event.valueOf(event)) {
+            Event.NEW_CALL_FAIL -> notifyOfFailedEvent(details, newHeaders)
+            Event.NEW_CALL_SUCCESS -> notifyOfSuccessfulEvent(
+                payload,
+                newHeaders,
+                gatewayMs = true,
+                queryMs = true
+            )
+            else -> println("TO DO() handle event $event")
+        }
+    }
+
+    private fun createHeaders(
+        sessionId: String,
+        event: String
+    ): RecordHeaders {
+        val newHeaders = RecordHeaders()
+        newHeaders.add("SESSION_ID", sessionId.encodeToByteArray())
+        newHeaders.add("EVENT", event.encodeToByteArray())
+        return newHeaders
+    }
+
+    fun extractData(msg: ConsumerRecord<String, String>) : Array<String> {
+        var data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
+
+        data = gson.fromJson(data["after"] as String, type) as MutableMap<String, Any>
+
+        val event = data["generatedEvent"] as String
+        val details = data["details"] as String? ?: ""
+        val payload = gson.toJson(data["data"])
+        val sessionId = data["sessionId"] as String
+
+        logger.info(event)
+        logger.info(details)
+        logger.info(payload)
+        logger.info(sessionId)
+
+        return arrayOf(event, details, payload, sessionId)
     }
 
     private fun notifyOfFailedEvent(details: String?, newHeaders: RecordHeaders) {
@@ -219,6 +290,8 @@ class DispatchMicroservice {
     }
 
     private fun parseData(data: MutableMap<String, Any>): Map<String, String> {
+
+        //TODO DELETE THIS SHIT
         val parsedData = data["after"].toString()
             .split(", ")
             .associate {

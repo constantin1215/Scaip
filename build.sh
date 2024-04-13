@@ -22,3 +22,7 @@ cd groups-microservice
 ./gradlew build clean
 ./gradlew build -Dquarkus.container-image.build=true -Dquarkus.container-image.image="constatin1215/groups-ms:v1"
 cd ..
+cd messaging-microservice
+./gradlew build clean
+./gradlew build -Dquarkus.container-image.build=true -Dquarkus.container-image.image="constatin1215/messaging-ms:v1"
+cd ..

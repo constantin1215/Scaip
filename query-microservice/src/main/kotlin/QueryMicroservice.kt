@@ -31,7 +31,8 @@ class QueryMicroservice {
         CREATE_GROUP_SUCCESS,
         UPDATE_GROUP_SUCCESS,
         ADD_MEMBERS_SUCCESS,
-        REMOVE_MEMBERS_SUCCESS
+        REMOVE_MEMBERS_SUCCESS,
+        NEW_MESSAGE_SUCCESS
     }
 
     private val gson = Gson()
@@ -95,6 +96,10 @@ class QueryMicroservice {
                     logger.info("Removing users from existing group.")
                     handleMemberRemovalFromGroup(data, headers)
                 }
+                Event.NEW_MESSAGE_SUCCESS -> {
+                    logger.info("Updating last message of group.")
+                    handleNewMessage(data, headers)
+                }
                 else -> { println("TO DO() handle ${headers["EVENT"] as String}") }
             }
         } catch (ex : EntityAlreadyInCollection) {
@@ -106,6 +111,32 @@ class QueryMicroservice {
         } catch (ex : IllegalArgumentException) {
             logger.warn("Unknown event possibly detected!")
         }
+    }
+
+    private fun handleNewMessage(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        if((data["groupId"] as String?) == null)
+            return
+
+        val group = groupRepository.findById(data["groupId"] as String)
+            ?: throw GroupNotFound(data["groupId"] as String, headers["EVENT"] as String)
+
+        val timestamp = (data["timestamp"] as MutableMap<String, String>)["\$numberLong"]!!.toLong()
+
+        val message = entity.Message(
+            data["_id"] as String,
+            data["userId"] as String,
+            data["content"] as String,
+            data["groupId"] as String,
+            timestamp
+        )
+
+        group.lastMessage = message
+
+        groupRepository.update(group)
+
+        userRepository.updateUserGroupsLastMessage(data["groupId"] as String, message)
+
+        logger.info("Last message in group updated.")
     }
 
     private fun handleMemberRemovalFromGroup(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {

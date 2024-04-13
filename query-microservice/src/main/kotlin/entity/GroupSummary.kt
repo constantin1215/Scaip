@@ -12,17 +12,20 @@ class GroupSummary() {
     lateinit var owner : UserSummary
     lateinit var title : String
     lateinit var description : String
+    var lastMessage : Message? = null
 
     constructor(
         id : String,
         owner : UserSummary,
         title : String,
         description : String,
+        lastMessage: Message
     ) : this() {
         this.id = id
         this.owner = owner
         this.title = title
         this.description = description
+        this.lastMessage = lastMessage
     }
 
     constructor(
@@ -32,6 +35,7 @@ class GroupSummary() {
         this.owner = group.owner
         this.title = group.title
         this.description = group.description
+        this.lastMessage = group.lastMessage
     }
 
     override fun toString(): String {

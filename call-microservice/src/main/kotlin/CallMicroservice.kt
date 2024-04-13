@@ -1,9 +1,6 @@
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import entity.Group
-import entity.Message
-import entity.MessageEvent
-import entity.User
+import entity.*
 import exceptions.*
 import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata
 import jakarta.enterprise.context.ApplicationScoped
@@ -14,29 +11,37 @@ import org.apache.kafka.common.header.internals.RecordHeaders
 import org.eclipse.microprofile.reactive.messaging.Channel
 import org.eclipse.microprofile.reactive.messaging.Emitter
 import org.eclipse.microprofile.reactive.messaging.Incoming
+import org.eclipse.microprofile.reactive.messaging.Message
 import org.jboss.logging.Logger
 import repository.GroupRepository
 import repository.OutboxRepository
 import repository.UserRepository
+import java.security.MessageDigest
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import kotlin.math.log
 
 @ApplicationScoped
-class MessagingMicroservice {
+class CallMicroservice {
+
     enum class Event {
         REGISTRATION_SUCCESS,
         CREATE_GROUP_SUCCESS,
         UPDATE_GROUP_SUCCESS,
         ADD_MEMBERS_SUCCESS,
         REMOVE_MEMBERS_SUCCESS,
-        NEW_MESSAGE,
-        NEW_MESSAGE_SUCCESS,
-        NEW_MESSAGE_FAIL,
-        FETCH_MESSAGES,
+        NEW_CALL,
+        NEW_CALL_SUCCESS,
+        NEW_CALL_FAIL,
+        JOIN_CALL,
         UNAUTHORIZED
     }
 
     private val gson = Gson()
     private val type = object : TypeToken<Map<String, Any>>() {}.type
     private val logger : Logger = Logger.getLogger(this.javaClass)
+    private val md = MessageDigest.getInstance("SHA-256")
 
     @Inject
     lateinit var userRepository: UserRepository
@@ -51,40 +56,50 @@ class MessagingMicroservice {
     @Channel("gateway_topic")
     lateinit var gatewayEmitter : Emitter<String>
 
-    @Incoming("message_topic")
+    @Incoming("call_topic")
     @Transactional
     fun consume(msg: ConsumerRecord<String, String>) {
-        val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
+        var data : MutableMap<String, Any>
+        try {
+            data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
+        } catch (ex : Exception) {
+            return
+        }
         val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
         logger.info("Received msg: $headers and $data")
 
         try {
-            when(Event.valueOf(headers["EVENT"] as String)) {
+            when (Event.valueOf(headers["EVENT"] as String)) {
                 Event.REGISTRATION_SUCCESS -> {
                     logger.info("Adding new user.")
                     handleNewUser(data)
                 }
+
                 Event.CREATE_GROUP_SUCCESS -> {
                     logger.info("Adding new group.")
                     handleNewGroup(data, headers)
                 }
+
                 Event.ADD_MEMBERS_SUCCESS -> {
                     logger.info("Adding new members to group.")
                     handleAddNewMembers(data, headers)
                 }
+
                 Event.REMOVE_MEMBERS_SUCCESS -> {
                     logger.info("Removing members from group.")
                     handleMemberRemoval(data, headers)
                 }
-                Event.NEW_MESSAGE -> {
-                    logger.info("Adding to message to conversation.")
-                    handleNewMessage(data, headers)
+                Event.NEW_CALL -> {
+                    logger.info("Initiating new call.")
+                    handleNewCall(data, headers)
                 }
-                Event.FETCH_MESSAGES -> {
-                    logger.info("Fetching messages from conversation.")
-                    handleMessageFetching(data, headers)
+                Event.JOIN_CALL -> {
+                    logger.info("User wants to join call.")
+                    handleJoinCall(data, headers)
                 }
-                else -> { println("TO DO() handle ${headers["EVENT"] as String}") }
+                else -> {
+                    println("TO DO() handle ${headers["EVENT"] as String}")
+                }
             }
         } catch (ex : EntityAlreadyInCollection) {
             logger.warn("Entity with ID: ${ex.entityId} already in collection")
@@ -97,22 +112,28 @@ class MessagingMicroservice {
         }
     }
 
-    private fun handleMessageFetching(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+    fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
 
-        val timestamp = (data["timestamp"] as String).toLong()
+    private fun handleJoinCall(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        logger.info(data)
 
-        val messagesJson = groupRepository.fetchMessagesFromGroup(data["groupId"] as String, timestamp)
+        val group = groupRepository.findById(data["groupId"] as String)
+            ?: throw GroupNotFound(data["groupId"] as String, headers["EVENT"] as String)
 
-        val newMsg = org.eclipse.microprofile.reactive.messaging.Message
-            .of(messagesJson)
+        val userId = data["userId"] as String
+        if (userId !in group.members)
+            throw Unauthorized("The user $userId is not in this group", headers["EVENT"] as String)
+
+        val channelJson = groupRepository.fetchCallChannel(group.id, data["callId"] as String)
+
+        val newMsg = Message
+            .of(channelJson)
             .addMetadata(
                 OutgoingKafkaRecordMetadata.builder<String>()
                     .withHeaders(createHeaders(headers)).build()
             )
 
         gatewayEmitter.send(newMsg)
-
-        logger.info("Messages fetched successfully.")
     }
 
     private fun createHeaders(headers: MutableMap<String, String>): RecordHeaders {
@@ -121,7 +142,7 @@ class MessagingMicroservice {
         return newHeaders
     }
 
-    private fun handleNewMessage(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+    private fun handleNewCall(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
         val group = groupRepository.findById(data["groupId"] as String)
             ?: throw GroupNotFound(data["groupId"] as String, headers["EVENT"] as String)
 
@@ -129,23 +150,48 @@ class MessagingMicroservice {
         if (userId !in group.members)
             throw Unauthorized("The user $userId is not in this group", headers["EVENT"] as String)
 
-        val newMessage = Message(userId, data["content"] as String)
-        group.lastMessage = newMessage
-        group.messages.add(newMessage)
+        md.update("${group.id}${Instant.now().toEpochMilli()}".toByteArray())
+        val channel = md.digest().toHex()
+
+        val callType = CallType.valueOf(data["type"] as String)
+
+        var newCall : Call
+        when (callType) {
+            CallType.INSTANT -> {
+                newCall = Call(
+                    userId,
+                    CallType.valueOf(data["type"] as String),
+                    channel
+                )
+            }
+            CallType.SCHEDULED -> {
+                val dateTime = LocalDateTime.parse(data["date"] as String, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                newCall = Call(
+                    userId,
+                    CallType.valueOf(data["type"] as String),
+                    channel,
+                    dateTime
+                )
+            }
+        }
+
+        group.calls.add(newCall)
 
         groupRepository.update(group)
 
-        newMessage.groupId = group.id
+        newCall.channel = ""
+        newCall.groupId = group.id
+
         outboxRepository.persist(
-            MessageEvent(
+            CallEvent(
                 headers["EVENT"] as String,
-                Event.NEW_MESSAGE_SUCCESS.toString(),
-                newMessage,
+                Event.NEW_CALL_SUCCESS.toString(),
+                newCall,
                 headers["SESSION_ID"] as String
             )
         )
 
-        logger.info("Message successfully added to conversation.")
+        logger.info("Call created successfully. $newCall")
     }
 
     private fun handleMemberRemoval(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {

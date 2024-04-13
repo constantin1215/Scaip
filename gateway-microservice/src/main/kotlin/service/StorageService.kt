@@ -31,6 +31,10 @@ class StorageService {
         ds.set(String::class.java).srem(key, *set.toTypedArray())
     }
 
+    fun getSet(key : String) : Set<String> {
+        return ds.set(String::class.java).smembers(key)
+    }
+
     fun keyExists(key : String) : Boolean {
         return ds.key().exists(key)
     }
@@ -45,5 +49,11 @@ class StorageService {
 
     fun deleteKey(key : String) {
         ds.key().del(key)
+    }
+
+    fun deleteKeys(pattern : String) {
+        val keys = ds.key().keys(pattern).toTypedArray()
+        if (keys.isNotEmpty())
+            ds.key().del(*keys)
     }
 }

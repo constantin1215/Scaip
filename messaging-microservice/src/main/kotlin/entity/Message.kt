@@ -7,6 +7,7 @@ class Message() {
     val id : String = UUID.randomUUID().toString()
     lateinit var userId : String
     lateinit var content : String
+    var groupId : String? = null
     var timestamp by Delegates.notNull<Long>()
 
     constructor(
