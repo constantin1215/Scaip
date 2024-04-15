@@ -151,6 +151,12 @@ services:
     depends_on:
       - kafka
       - mongodb-messages
+  calls-microservice:
+    container_name: "calls-ms"
+    image: constatin1215/calls-ms:v1
+    depends_on:
+      - kafka
+      - mongodb-calls
 volumes:
   kafka_data:
     driver: local

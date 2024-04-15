@@ -13,7 +13,6 @@ class User() {
     lateinit var lastName : String
     var pictureId : String? = null
     lateinit var groups : MutableSet<GroupSummary>
-    lateinit var calls : MutableSet<String>
     lateinit var notifications : MutableSet<String>
     constructor(
         id : String,
@@ -22,7 +21,6 @@ class User() {
         firstName : String,
         lastName : String,
         groups : MutableSet<GroupSummary>,
-        calls : MutableSet<String>,
         notifications : MutableSet<String>
     ) : this() {
         this.id = id
@@ -31,7 +29,6 @@ class User() {
         this.firstName = firstName
         this.lastName = lastName
         this.groups = groups
-        this.calls = calls
         this.notifications = notifications
     }
 }

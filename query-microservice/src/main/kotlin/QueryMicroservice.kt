@@ -1,9 +1,6 @@
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import entity.Group
-import entity.GroupSummary
-import entity.UserSummary
-import entity.User
+import entity.*
 import exceptions.*
 import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata
 import jakarta.enterprise.context.ApplicationScoped
@@ -18,7 +15,13 @@ import org.eclipse.microprofile.reactive.messaging.Message
 import org.jboss.logging.Logger
 import repository.GroupRepository
 import repository.UserRepository
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 import kotlin.math.log
+import kotlin.time.Duration.Companion.seconds
 
 @ApplicationScoped
 class QueryMicroservice {
@@ -32,7 +35,8 @@ class QueryMicroservice {
         UPDATE_GROUP_SUCCESS,
         ADD_MEMBERS_SUCCESS,
         REMOVE_MEMBERS_SUCCESS,
-        NEW_MESSAGE_SUCCESS
+        NEW_MESSAGE_SUCCESS,
+        NEW_CALL_SUCCESS
     }
 
     private val gson = Gson()
@@ -100,6 +104,10 @@ class QueryMicroservice {
                     logger.info("Updating last message of group.")
                     handleNewMessage(data, headers)
                 }
+                Event.NEW_CALL_SUCCESS -> {
+                    logger.info("Adding new call to group.")
+                    handleNewCall(data, headers)
+                }
                 else -> { println("TO DO() handle ${headers["EVENT"] as String}") }
             }
         } catch (ex : EntityAlreadyInCollection) {
@@ -108,9 +116,49 @@ class QueryMicroservice {
             logger.warn("Event with missing data received")
         } catch (ex : UserProfileNotFound) {
             logger.warn("User with ID: ${ex.userId} not found while handling EVENT: ${ex.event}")
+        } catch (ex : GroupNotFound) {
+            logger.warn("User with ID: ${ex.groupId} not found while handling EVENT: ${ex.event}")
         } catch (ex : IllegalArgumentException) {
             logger.warn("Unknown event possibly detected!")
         }
+    }
+
+    private fun handleNewCall(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        logger.info(data)
+        val group = groupRepository.findById((data["groupId"] as String?) ?: "-1")
+            ?: throw GroupNotFound(data["groupId"] as String? ?: "-1", headers["EVENT"] as String)
+
+        val type = CallType.valueOf(data["type"] as String)
+
+        var call : Call
+        when(type) {
+            CallType.INSTANT -> {
+                call = Call(
+                        data["_id"] as String,
+                        data["leaderId"] as String,
+                        type,
+                        (data["timestamp"] as MutableMap<String, String>)["\$numberLong"]!!.toLong()
+                    )
+            }
+            CallType.SCHEDULED -> {
+                val seconds = ((data["scheduledTime"] as MutableMap<String, Any>)["\$date"]!! as Double).toLong()
+                val date = ZonedDateTime.ofInstant(Instant.ofEpochMilli(seconds), ZoneId.systemDefault()).toLocalDateTime()
+
+                call = Call(
+                    data["_id"] as String,
+                    data["leaderId"] as String,
+                    type,
+                    date,
+                    (data["timestamp"] as MutableMap<String, String>)["\$numberLong"]!!.toLong(),
+                )
+            }
+        }
+
+        group.calls.add(call)
+
+        groupRepository.update(group)
+
+        logger.info("New call added to group successfully.")
     }
 
     private fun handleNewMessage(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
@@ -207,7 +255,8 @@ class QueryMicroservice {
             owner,
             data["title"] as String,
             data["description"] as String,
-            members.map { UserSummary(it) }.toMutableSet()
+            members.map { UserSummary(it) }.toMutableSet(),
+            mutableListOf()
         )
 
         groupRepository.persist(newGroup)
@@ -298,7 +347,6 @@ class QueryMicroservice {
                 data["email"] as String,
                 data["firstName"] as String,
                 data["lastName"] as String,
-                mutableSetOf(),
                 mutableSetOf(),
                 mutableSetOf()
             )

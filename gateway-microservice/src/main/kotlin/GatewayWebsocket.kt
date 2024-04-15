@@ -130,30 +130,34 @@ class GatewayWebsocket {
             return
         }
 
-        val data = gson.fromJson(message, type) as MutableMap<String, Any>
+        try {
+            val data = gson.fromJson(message, type) as MutableMap<String, Any>
 
-        if(data["EVENT"] == null)
-            throw MissingFieldException("The EVENT field is missing!")
+            if(data["EVENT"] == null)
+                throw MissingFieldException("The EVENT field is missing!")
 
-        logger.info("event> ${session!!.id}: ${data["EVENT"]}")
+            logger.info("event> ${session!!.id}: ${data["EVENT"]}")
 
-        val headers = RecordHeaders()
+            val headers = RecordHeaders()
 
-        if(data["JWT"] != null)
-            headers.add("JWT", data["JWT"].toString().encodeToByteArray())
+            if(data["JWT"] != null)
+                headers.add("JWT", data["JWT"].toString().encodeToByteArray())
 
-        headers.add("EVENT", data["EVENT"].toString().encodeToByteArray())
-        headers.add("SESSION_ID", session.id.encodeToByteArray())
-        headers.add("TRACE", "GATEWAY-".encodeToByteArray())
+            headers.add("EVENT", data["EVENT"].toString().encodeToByteArray())
+            headers.add("SESSION_ID", session.id.encodeToByteArray())
+            headers.add("TRACE", "GATEWAY-".encodeToByteArray())
 
-        data.remove("EVENT")
+            data.remove("EVENT")
 
-        val msg = Message
-            .of(gson.toJson(data))
-            .addMetadata(OutgoingKafkaRecordMetadata.builder<String>()
-                .withHeaders(headers).build())
+            val msg = Message
+                .of(gson.toJson(data))
+                .addMetadata(OutgoingKafkaRecordMetadata.builder<String>()
+                    .withHeaders(headers).build())
 
-        emitter.send(msg)
+            emitter.send(msg)
+        } catch (ex : Exception) {
+            logger.warn("Exception encoutered. ${ex.message}")
+        }
     }
 
     private fun checkExpiredSession(session: Session?) {

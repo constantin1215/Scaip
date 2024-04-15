@@ -11,6 +11,7 @@ class Group() {
     lateinit var title : String
     lateinit var description : String
     lateinit var members : MutableSet<UserSummary>
+    lateinit var calls : MutableList<Call>
     var lastMessage : Message? = null
 
     constructor(
@@ -18,13 +19,15 @@ class Group() {
         owner : UserSummary,
         title : String,
         description : String,
-        members : MutableSet<UserSummary>
+        members : MutableSet<UserSummary>,
+        calls : MutableList<Call>
     ) : this() {
         this.id = id
         this.owner = owner
         this.title = title
         this.description = description
         this.members = members
+        this.calls = calls
     }
 
     override fun toString(): String {

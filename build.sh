@@ -26,3 +26,8 @@ cd messaging-microservice
 ./gradlew build clean
 ./gradlew build -Dquarkus.container-image.build=true -Dquarkus.container-image.image="constatin1215/messaging-ms:v1"
 cd ..
+cd call-microservice
+./gradlew build clean
+./gradlew build -Dquarkus.container-image.build=true -Dquarkus.container-image.image="constatin1215/calls-ms:v1"
+cd ..
+docker compose up

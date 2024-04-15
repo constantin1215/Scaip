@@ -115,8 +115,6 @@ class CallMicroservice {
     fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
 
     private fun handleJoinCall(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
-        logger.info(data)
-
         val group = groupRepository.findById(data["groupId"] as String)
             ?: throw GroupNotFound(data["groupId"] as String, headers["EVENT"] as String)
 
