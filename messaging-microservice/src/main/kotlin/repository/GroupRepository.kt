@@ -19,6 +19,10 @@ class GroupRepository : PanacheMongoRepository<Group> {
         val group : Bson = Document("\$group", Document(mapOf("_id" to "\$_id", "recentMessages" to Document("\$push", "\$messages"))))
         val project : Bson = Document("\$project", Document(mapOf("_id" to 1, "recentMessages" to Document("\$slice", listOf("\$recentMessages", 20)))))
 
-        return mongoDatabase().getCollection("Group").aggregate(listOf(match, unwind, match2, sort, group, project)).map { it.toJson() }.toList()[0]
+        val list =  mongoDatabase().getCollection("Group").aggregate(listOf(match, unwind, match2, sort, group, project)).map { it.toJson() }.toList()
+
+        if (list.isEmpty())
+            return Document(mapOf("_id" to groupId, "recentMessages" to listOf<String>())).toJson()
+        return list[0]
     }
 }

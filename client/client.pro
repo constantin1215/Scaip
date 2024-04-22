@@ -9,16 +9,27 @@ CONFIG += c++17
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    EventHandler.cpp \
+    UserData.cpp \
     WSClient.cpp \
+    groupwidget.cpp \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    messagewidget.cpp
 
 HEADERS += \
+    EventHandler.h \
+    UI_UpdateTypes.h \
+    UserData.h \
     WSClient.h \
-    mainwindow.h
+    groupwidget.h \
+    mainwindow.h \
+    messagewidget.h
 
 FORMS += \
-    mainwindow.ui
+    groupwidget.ui \
+    mainwindow.ui \
+    messagewidget.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

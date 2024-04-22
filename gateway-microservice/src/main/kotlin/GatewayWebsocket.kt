@@ -192,6 +192,7 @@ class GatewayWebsocket {
         msg: ConsumerRecord<String, String>
     ) {
         Vertx.vertx().executeBlocking { ->
+            data["EVENT"] = headers["EVENT"] as String
             when (Event.valueOf(headers["EVENT"] as String)) {
                 Event.REGISTRATION_FAIL,
                 Event.LOG_IN_FAIL,
@@ -282,7 +283,7 @@ class GatewayWebsocket {
                 }
             }
             if (sessions[session] != null)
-                sessions[session]!!.asyncRemote.sendText(msg.value())
+                sessions[session]!!.asyncRemote.sendText(gson.toJson(data))
         }
     }
 }

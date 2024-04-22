@@ -2,13 +2,14 @@
 #include "mainwindow.h"
 #include "qurl.h"
 
+#include <EventHandler.h>
 #include <QApplication>
 #include <QDir>
 #include <QFileInfo>
 
 int main(int argc, char *argv[])
 {
-    QString fileName = ":/styles/style.qss";
+    QString fileName = ":/styles/style.css";
     qDebug() << QDir::currentPath();
     QFileInfo info(fileName);
     QFile file(info.absoluteFilePath());
@@ -19,7 +20,13 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    QTextStream in(&file);
+    QString styleSheet = in.readAll();
+
+    file.close();
+
     QApplication a(argc, argv);
+    a.setStyleSheet(styleSheet);
 
     QUrl url;
     url.setScheme("ws");
@@ -28,9 +35,15 @@ int main(int argc, char *argv[])
     url.setPort(8080);
 
     WSClient client(url, true);
-    // QObject::connect(&client, &WSClient::closed, &a, &QCoreApplication::quit);
 
     MainWindow w(nullptr, &client);
+
+    EventHandler eventHandler(w);
+
+    EventHandler::connect(&client, &WSClient::passToHandler, &eventHandler, &EventHandler::handleEvent);
+    EventHandler::connect(&eventHandler, &EventHandler::fetchProfile, &client, &WSClient::onFetchProfile);
+    EventHandler::connect(&eventHandler, &EventHandler::updateUI, &w, &MainWindow::handleUpdateUI);
+    EventHandler::connect(&w, &MainWindow::fetchMessages, &client, &WSClient::onFetchMessages);
     w.show();
 
     return a.exec();

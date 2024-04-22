@@ -11,6 +11,10 @@ public:
     void sendEvent(QString event);
 Q_SIGNALS:
     void closed();
+    void passToHandler(QString jsonString);
+public Q_SLOTS:
+    void onFetchProfile(QString JWT);
+    void onFetchMessages(QString groupId, qint64 timestamp);
 
 private Q_SLOTS:
     void onConnected();

@@ -1,10 +1,13 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "UI_UpdateTypes.h"
+#include "qlistwidget.h"
 #include <QMainWindow>
 #include <WSClient.h>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QMovie>
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -19,6 +22,14 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr, WSClient *client = nullptr);
     ~MainWindow();
+void handleProfileFetchUpdate();
+
+    void handleGroupChatConversationUpdate(QJsonObject eventData);
+
+Q_SIGNALS:
+    void fetchMessages(QString groupId, qint64 timestamp);
+public Q_SLOTS:
+    void handleUpdateUI(UI_UpdateType type, QJsonObject eventData);
 
 private slots:
     void on_loginButton_clicked();
@@ -33,8 +44,15 @@ private slots:
 
     void on_register_Button_clicked();
 
+    void on_profileButton_clicked();
+
+    void on_chatsButton_clicked();
+
+    void on_groupListWidget_itemClicked(QListWidgetItem *item);
+
 private:
     Ui::MainWindow *ui;
     WSClient *client;
+    QMovie *loadingGif = new QMovie(":/gifs/loading.gif");
 };
 #endif // MAINWINDOW_H
