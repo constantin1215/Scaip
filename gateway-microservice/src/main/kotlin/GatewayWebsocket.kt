@@ -264,7 +264,7 @@ class GatewayWebsocket {
                             logger.info("Member session: $memberSession")
                             if (memberSession != null) {
                                 logger.info("Sending message to $memberSession")
-                                sessions[memberSession]!!.asyncRemote.sendText(msg.value())
+                                sessions[memberSession]!!.asyncRemote.sendText(gson.toJson(data))
                             }
                         }
                         return@executeBlocking

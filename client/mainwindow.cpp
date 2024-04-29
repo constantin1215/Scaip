@@ -5,6 +5,8 @@
 #include <QThread>
 #include <QTimer>
 #include <UserData.h>
+#include <calldialog.h>
+#include <callwindow.h>
 #include <groupwidget.h>
 #include <messagewidget.h>
 
@@ -27,10 +29,18 @@ enum class GroupStatus {
 
 enum class EventsUI {
     LOG_IN,
-    REGISTER
+    REGISTER,
+    NEW_MESSAGE,
+    NEW_CALL,
+    JOIN_CALL
 };
 
-QHash<QString, QList<MessageWidget*>> groupConversations;
+enum class CallTypes {
+    INSTANT,
+    SCHEDULED
+};
+
+QHash<QString, QList<QJsonObject>> groupConversations;
 
 QString eventToString(EventsUI event) {
     switch(event) {
@@ -38,6 +48,21 @@ QString eventToString(EventsUI event) {
             return "LOG_IN";
         case EventsUI::REGISTER:
             return "REGISTER";
+        case EventsUI::NEW_MESSAGE:
+            return "NEW_MESSAGE";
+        case EventsUI::NEW_CALL:
+            return "NEW_CALL";
+        case EventsUI::JOIN_CALL:
+            return "JOIN_CALL";
+        }
+}
+
+QString callTypeToString(CallTypes type) {
+    switch(type) {
+    case CallTypes::INSTANT:
+        return "INSTANT";
+    case CallTypes::SCHEDULED:
+        return "SCHEDULED";
     }
 }
 
@@ -121,6 +146,11 @@ void MainWindow::handleProfileFetchUpdate()
 
 void MainWindow::handleGroupChatConversationUpdate(QJsonObject eventData)
 {
+    if (eventData["_id"].isNull() || eventData["recentMessages"].isNull()) {
+        qDebug() << "Missing mandatory fields in updating conversations";
+        return;
+    }
+
     QString groupId = eventData["_id"].toString();
     QJsonArray recentMessages = eventData["recentMessages"].toArray();
 
@@ -135,13 +165,116 @@ void MainWindow::handleGroupChatConversationUpdate(QJsonObject eventData)
             messageObject["timestamp"].toInteger()
             );
 
-        groupConversations[groupId] << widget;
+        groupConversations[groupId] << messageObject;
 
         QListWidgetItem *item = new QListWidgetItem(ui->messagesListWidget);
 
         item->setSizeHint(widget->sizeHint());
         ui->messagesListWidget->setItemWidget(item, widget);
     }
+
+    ui->messagesListWidget->scrollToBottom();
+}
+
+void MainWindow::handleGroupChatNewMessage(QJsonObject eventData)
+{
+    if (eventData["groupId"].isNull() || eventData["timestamp"].isNull() ||
+        eventData["timestamp"].toObject()["$numberLong"].isNull() || eventData["_id"].isNull() ||
+        eventData["content"].isNull() || eventData["userId"].isNull()) {
+        qDebug() << "Missing mandatory fields on new message!";
+        return;
+    }
+
+    QString groupId = eventData["groupId"].toString();
+    qint64 timestamp = eventData["timestamp"].toObject()["$numberLong"].toString().toLongLong();
+
+    QJsonObject newMessage;
+
+    newMessage.insert("_id", eventData["_id"].toString());
+    newMessage.insert("content", eventData["content"].toString());
+    newMessage.insert("timestamp", timestamp);
+    newMessage.insert("userId", eventData["userId"].toString());
+
+    groupConversations[groupId] << newMessage;
+
+    for(int i = 0; i < ui->groupListWidget->count(); i++) {
+        GroupWidget *groupWidget = qobject_cast<GroupWidget*>(ui->groupListWidget->itemWidget(ui->groupListWidget->item(i)));
+
+        if (groupWidget->getId() == groupId) {
+            groupWidget->setLastMessage(eventData["content"].toString());
+            groupWidget->setTimestamp(timestamp);
+            break;
+        }
+    }
+
+    if (ui->hiddenGroupId->text() == groupId) {
+        QListWidgetItem *item = new QListWidgetItem(ui->messagesListWidget);
+
+        MessageWidget *widget = new MessageWidget(
+            this,
+            eventData["_id"].toString(),
+            eventData["userId"].toString(),
+            eventData["content"].toString(),
+            timestamp
+            );
+
+        item->setSizeHint(widget->sizeHint());
+        ui->messagesListWidget->setItemWidget(item, widget);
+        ui->messagesListWidget->scrollToBottom();
+    }
+}
+
+QJsonDocument createJoinCallEvent(QJsonObject eventData) {
+    QJsonObject event;
+
+    event.insert("EVENT", eventToString(EventsUI::JOIN_CALL));
+    event.insert("groupId", eventData["groupId"].toString());
+    event.insert("callId", eventData["_id"].toString());
+    event.insert("JWT", UserData::getInstance()->getJWT());
+
+    QJsonDocument json(event);
+
+    return json;
+}
+
+void MainWindow::handleInstantCall(QJsonObject eventData)
+{
+    if (eventData["groupId"].isNull() || eventData["_id"].isNull()) {
+        qDebug() << "Missing mandatory fields on new instant call!";
+        return;
+    }
+
+    if (!eventData["leaderId"].isNull() && eventData["leaderId"].toString() == UserData::getInstance()->getId() ) {
+        qDebug() << "Leader joining the call immediately";
+
+        QJsonDocument event = createJoinCallEvent(eventData);
+        this->client->sendEvent(QString::fromUtf8(event.toJson(QJsonDocument::Indented)));
+        return;
+    }
+
+    CallDialog* callDialog = new CallDialog(this);
+    callDialog->exec();
+
+    if(callDialog->result() == QDialog::Accepted) {
+        qDebug() << "Call accepted!";
+
+        QJsonDocument event = createJoinCallEvent(eventData);
+        this->client->sendEvent(QString::fromUtf8(event.toJson(QJsonDocument::Indented)));
+    }
+    else {
+        qDebug() << "Call declined!";
+    }
+}
+
+void MainWindow::handleJoinCall(QJsonObject eventData)
+{
+    if (eventData["_id"].isNull() || eventData["channel"].isNull()) {
+        qDebug() << "Missing mandatory fields on joining call!";
+        return;
+    }
+
+    CallWindow* callWindow = new CallWindow(nullptr, eventData);
+    callWindow->exec();
 }
 
 void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
@@ -156,7 +289,22 @@ void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
             qDebug() << "Type: UPDATE_GROUP_CHAT";
             handleGroupChatConversationUpdate(eventData);
             break;
-    }
+        case UI_UpdateType::NEW_MESSAGE_SUCCESS:
+            qDebug() << "Type: NEW_MESSAGE_SUCCESS";
+            handleGroupChatNewMessage(eventData);
+            break;
+        case UI_UpdateType::NEW_INSTANT_CALL:
+            qDebug() << "Type: NEW_INSTANT_CALL";
+            handleInstantCall(eventData);
+            break;
+        case UI_UpdateType::NEW_SCHEDULED_CALL:
+            qDebug() << "Type: NEW_SCHEDULED_CALL";
+            break;
+        case UI_UpdateType::JOIN_CALL:
+            qDebug() << "Type: JOIN_CALL";
+            handleJoinCall(eventData);
+            break;
+        }
 }
 
 void MainWindow::on_loginButton_clicked()
@@ -251,16 +399,27 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
                 ui->stackedWidget_groups->setCurrentIndex(static_cast<int>(GroupStatus::GROUP_SELECTED));
                 ui->hiddenGroupId->setText(groupWidget->getId());
 
-                ui->messagesListWidget->clear();
+                if (ui->messagesListWidget->count() > 0) {
+                    ui->messagesListWidget->clear();
+                }
 
-                QList<MessageWidget*> messages = groupConversations[groupWidget->getId()];
-
+                QList<QJsonObject> messages = groupConversations[groupWidget->getId()];
                 for(int i = 0;i < messages.count(); i++) {
                     QListWidgetItem *item = new QListWidgetItem(ui->messagesListWidget);
 
-                    item->setSizeHint(messages[i]->sizeHint());
-                    ui->messagesListWidget->setItemWidget(item, messages[i]);
+                    MessageWidget *widget = new MessageWidget(
+                        this,
+                        messages[i]["_id"].toString(),
+                        messages[i]["userId"].toString(),
+                        messages[i]["content"].toString(),
+                        messages[i]["timestamp"].toInteger()
+                        );
+
+                    item->setSizeHint(widget->sizeHint());
+                    ui->messagesListWidget->setItemWidget(item, widget);
                 }
+
+                ui->messagesListWidget->scrollToBottom();
 
                 if(!groupWidget->getOpenedStatus()) {
                     groupWidget->setOpenedStatus(true);
@@ -269,5 +428,40 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
             }
         }
     }
+}
+
+
+void MainWindow::on_sendMessageButton_clicked()
+{
+    QString messageContent = ui->messageTextEdit->toPlainText();
+
+    if (messageContent == "")
+        return;
+
+    QJsonObject event;
+    event.insert("EVENT", eventToString(EventsUI::NEW_MESSAGE));
+    event.insert("content", messageContent);
+    event.insert("groupId", ui->hiddenGroupId->text());
+    event.insert("JWT", UserData::getInstance()->getJWT());
+
+    QJsonDocument json(event);
+
+    this->client->sendEvent(QString::fromUtf8(json.toJson(QJsonDocument::Indented)));
+
+    ui->messageTextEdit->setText("");
+}
+
+
+void MainWindow::on_callButton_clicked()
+{
+    QJsonObject event;
+    event.insert("EVENT", eventToString(EventsUI::NEW_CALL));
+    event.insert("groupId", ui->hiddenGroupId->text());
+    event.insert("type", callTypeToString(CallTypes::INSTANT));
+    event.insert("JWT", UserData::getInstance()->getJWT());
+
+    QJsonDocument json(event);
+
+    this->client->sendEvent(QString::fromUtf8(json.toJson(QJsonDocument::Indented)));
 }
 

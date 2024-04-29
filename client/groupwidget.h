@@ -21,7 +21,8 @@ public:
     bool getOpenedStatus();
 
     void setOpenedStatus(bool status);
-
+    void setLastMessage(QString lastMessage);
+    void setTimestamp(qint64 timestamp);
 private:
     Ui::GroupWidget *ui;
     QString id;

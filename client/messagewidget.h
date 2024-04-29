@@ -14,11 +14,9 @@ class MessageWidget : public QWidget
 public:
     explicit MessageWidget(QWidget *parent = nullptr, QString id = "", QString userId = "", QString content = "", qint64 timestamp = 0);
     ~MessageWidget();
-
+    QString id;
 private:
     Ui::MessageWidget *ui;
-
-    QString id;
 };
 
 #endif // MESSAGEWIDGET_H

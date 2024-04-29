@@ -26,6 +26,9 @@ private:
     void handleRegisterFail(QJsonObject eventData);
     void handleFetchedProfile(QJsonObject eventData);
     void handleFetchedMessages(QJsonObject eventData);
+    void handleNewMessage(QJsonObject eventData);
+    void handleNewCall(QJsonObject eventData);
+    void handleJoinCall(QJsonObject eventData);
 };
 
 #endif // EVENTHANDLER_H

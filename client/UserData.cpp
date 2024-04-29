@@ -2,6 +2,11 @@
 
 UserData* UserData::userData_ = nullptr;
 
+void UserData::setId(QString id)
+{
+    this->id = id;
+}
+
 void UserData::setJWT(QString JWT)
 {
     this->JWT = JWT;
@@ -31,6 +36,11 @@ void UserData::setJSON(QJsonObject json)
 {
     this->rawJson = json;
     this->groups = json["groups"].toArray();
+}
+
+QString UserData::getId()
+{
+    return this->id;
 }
 
 QString UserData::getJWT()
@@ -71,6 +81,7 @@ QJsonObject UserData::getJSON()
 void UserData::printData()
 {
     qDebug() <<
+        "\nID: " << this->id <<
         "\nUsername: " << this->username <<
         "\nEmail: " << this->email <<
         "\nFirstName: " << this->firstName <<

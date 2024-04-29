@@ -8,6 +8,7 @@
 class UserData : public QObject {
     Q_OBJECT
 private:
+    QString id;
     QString JWT;
     QString username;
     QString firstName;
@@ -21,6 +22,7 @@ private:
     static UserData* userData_;
 
 public:
+    void setId(QString id);
     void setJWT(QString JWT);
     void setUsername(QString username);
     void setFirstName(QString firstName);
@@ -28,6 +30,7 @@ public:
     void setEmail(QString email);
     void setJSON(QJsonObject json);
 
+    QString getId();
     QString getJWT();
     QString getUsername();
     QString getFirstName();

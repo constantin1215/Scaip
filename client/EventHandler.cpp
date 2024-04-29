@@ -11,7 +11,10 @@ enum class EventsReceived {
     LOG_IN_SUCCESS,
     LOG_IN_FAIL,
     FETCH_PROFILE,
-    FETCH_MESSAGES
+    FETCH_MESSAGES,
+    NEW_MESSAGE_SUCCESS,
+    NEW_CALL_SUCCESS,
+    JOIN_CALL
 };
 
 static const  QMap<QString, EventsReceived> events {
@@ -20,7 +23,10 @@ static const  QMap<QString, EventsReceived> events {
     {"LOG_IN_SUCCESS", EventsReceived::LOG_IN_SUCCESS},
     {"LOG_IN_FAIL", EventsReceived::LOG_IN_FAIL},
     {"FETCH_PROFILE", EventsReceived::FETCH_PROFILE},
-    {"FETCH_MESSAGES", EventsReceived::FETCH_MESSAGES}
+    {"FETCH_MESSAGES", EventsReceived::FETCH_MESSAGES},
+    {"NEW_MESSAGE_SUCCESS", EventsReceived::NEW_MESSAGE_SUCCESS},
+    {"NEW_CALL_SUCCESS", EventsReceived::NEW_CALL_SUCCESS},
+    {"JOIN_CALL", EventsReceived::JOIN_CALL}
 };
 
 EventHandler::EventHandler(MainWindow &ui, bool debug, QObject *parent) :
@@ -78,6 +84,15 @@ void EventHandler::handleEvent(QString jsonString)
         case EventsReceived::FETCH_MESSAGES:
             handleFetchedMessages(jsonObjEvent);
             break;
+        case EventsReceived::NEW_MESSAGE_SUCCESS:
+            handleNewMessage(jsonObjEvent);
+            break;
+        case EventsReceived::NEW_CALL_SUCCESS:
+            handleNewCall(jsonObjEvent);
+            break;
+        case EventsReceived::JOIN_CALL:
+            handleJoinCall(jsonObjEvent);
+            break;
         }
 }
 
@@ -112,12 +127,43 @@ void EventHandler::handleFetchedMessages(QJsonObject eventData)
     emit updateUI(UI_UpdateType::UPDATE_GROUP_CHAT, eventData);
 }
 
+void EventHandler::handleNewMessage(QJsonObject eventData)
+{
+    qDebug() << "Handling NEW_MESSAGE_SUCCESS\n";
+
+    emit updateUI(UI_UpdateType::NEW_MESSAGE_SUCCESS, eventData);
+}
+
+void EventHandler::handleNewCall(QJsonObject eventData)
+{
+    qDebug() << "Handling NEW_CALL_SUCCESS\n";
+
+    if (eventData["type"].isNull()) {
+        qDebug() << "Call type not present\n";
+        return;
+    }
+
+    if(eventData["type"].toString() == "INSTANT")
+        emit updateUI(UI_UpdateType::NEW_INSTANT_CALL, eventData);
+
+    if(eventData["type"].toString() == "SCHEDULED")
+        emit updateUI(UI_UpdateType::NEW_SCHEDULED_CALL, eventData);
+}
+
+void EventHandler::handleJoinCall(QJsonObject eventData)
+{
+    qDebug() << "Handling JOIN_CALL\n";
+
+    emit updateUI(UI_UpdateType::JOIN_CALL, eventData);
+}
+
 void EventHandler::handleFetchedProfile(QJsonObject eventData)
 {
     qDebug() << "Handling FETCH_PROFILE\n";
 
     UserData* instance = UserData::getInstance();
 
+    instance->setId(eventData["id"].toString());
     instance->setUsername(eventData["username"].toString());
     instance->setEmail(eventData["email"].toString());
     instance->setLastName(eventData["lastName"].toString());

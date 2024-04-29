@@ -1,6 +1,5 @@
 package repository
 
-import com.mongodb.client.model.Aggregates
 import entity.Group
 import io.quarkus.mongodb.panache.kotlin.PanacheMongoRepository
 import jakarta.enterprise.context.ApplicationScoped
@@ -14,12 +13,14 @@ class GroupRepository : PanacheMongoRepository<Group> {
     fun fetchMessagesFromGroup(groupId: String, timestamp : Long) : String {
         val match : Bson = Document("\$match", Document("_id", groupId))
         val unwind : Bson = Document("\$unwind", "\$messages")
-        val match2 : Bson = Document("\$match", Document("messages.timestamp", Document("\$lt", timestamp)))
-        val sort : Bson = Document("\$sort", Document("messages.timestamp", -1))
+        val match2 : Bson = Document("\$match", Document("messages.timestamp", Document("\$lte", timestamp)))
+        val sort1 : Bson = Document("\$sort", Document("messages.timestamp", -1))
+        val limit : Bson = Document("\$limit", 20)
+        val sort2 : Bson = Document("\$sort", Document("messages.timestamp", 1))
         val group : Bson = Document("\$group", Document(mapOf("_id" to "\$_id", "recentMessages" to Document("\$push", "\$messages"))))
-        val project : Bson = Document("\$project", Document(mapOf("_id" to 1, "recentMessages" to Document("\$slice", listOf("\$recentMessages", 20)))))
+        //val project : Bson = Document("\$project", Document(mapOf("_id" to 1, "recentMessages" to Document("\$slice", listOf("\$recentMessages", 20)))))
 
-        val list =  mongoDatabase().getCollection("Group").aggregate(listOf(match, unwind, match2, sort, group, project)).map { it.toJson() }.toList()
+        val list =  mongoDatabase().getCollection("Group").aggregate(listOf(match, unwind, match2, sort1, limit, sort2, group)).map { it.toJson() }.toList()
 
         if (list.isEmpty())
             return Document(mapOf("_id" to groupId, "recentMessages" to listOf<String>())).toJson()

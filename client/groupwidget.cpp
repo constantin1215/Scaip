@@ -45,3 +45,14 @@ void GroupWidget::setOpenedStatus(bool status)
 {
     this->wasOpened = status;
 }
+
+void GroupWidget::setLastMessage(QString lastMessage)
+{
+    ui->lastMessageLabel->setText(lastMessage);
+}
+
+void GroupWidget::setTimestamp(qint64 timestamp)
+{
+    ui->timestampLabel->setText(timestamp == 0 ? "" : QDateTime::fromSecsSinceEpoch(timestamp/1000).toString("yyyy-MM-dd hh:mm:ss"));
+    this->timestamp = timestamp;
+}

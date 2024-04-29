@@ -1,4 +1,4 @@
-QT       += core gui websockets
+QT       += core gui websockets multimedia multimediawidgets
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -12,6 +12,8 @@ SOURCES += \
     EventHandler.cpp \
     UserData.cpp \
     WSClient.cpp \
+    calldialog.cpp \
+    callwindow.cpp \
     groupwidget.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -22,11 +24,15 @@ HEADERS += \
     UI_UpdateTypes.h \
     UserData.h \
     WSClient.h \
+    calldialog.h \
+    callwindow.h \
     groupwidget.h \
     mainwindow.h \
     messagewidget.h
 
 FORMS += \
+    calldialog.ui \
+    callwindow.ui \
     groupwidget.ui \
     mainwindow.ui \
     messagewidget.ui

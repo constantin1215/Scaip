@@ -22,9 +22,12 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr, WSClient *client = nullptr);
     ~MainWindow();
-void handleProfileFetchUpdate();
 
+    void handleProfileFetchUpdate();
     void handleGroupChatConversationUpdate(QJsonObject eventData);
+    void handleGroupChatNewMessage(QJsonObject eventData);
+    void handleInstantCall(QJsonObject eventData);
+    void handleJoinCall(QJsonObject eventData);
 
 Q_SIGNALS:
     void fetchMessages(QString groupId, qint64 timestamp);
@@ -49,6 +52,10 @@ private slots:
     void on_chatsButton_clicked();
 
     void on_groupListWidget_itemClicked(QListWidgetItem *item);
+
+    void on_sendMessageButton_clicked();
+
+    void on_callButton_clicked();
 
 private:
     Ui::MainWindow *ui;
