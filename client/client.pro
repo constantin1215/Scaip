@@ -14,6 +14,7 @@ SOURCES += \
     WSClient.cpp \
     calldialog.cpp \
     callwindow.cpp \
+    callwsclient.cpp \
     groupwidget.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -26,6 +27,7 @@ HEADERS += \
     WSClient.h \
     calldialog.h \
     callwindow.h \
+    callwsclient.h \
     groupwidget.h \
     mainwindow.h \
     messagewidget.h

@@ -273,7 +273,7 @@ void MainWindow::handleJoinCall(QJsonObject eventData)
         return;
     }
 
-    CallWindow* callWindow = new CallWindow(nullptr, eventData);
+    CallWindow* callWindow = new CallWindow(nullptr, &eventData);
     callWindow->exec();
 }
 
