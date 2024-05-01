@@ -276,8 +276,12 @@ class GatewayWebsocket {
                     logger.info(data)
                 }
 
+                Event.JOIN_CALL -> {
+                    logger.info("An user tries to join a call.")
+                }
+
                 else -> {
-                    logger.info("TO DO() handle other events")
+                    logger.info("TO DO() handle other events ${headers["EVENT"] as String}")
                     //session.asyncRemote.sendText("TO DO() handle other events")
 
                 }

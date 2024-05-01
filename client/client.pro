@@ -11,10 +11,11 @@ CONFIG += c++17
 SOURCES += \
     EventHandler.cpp \
     UserData.cpp \
+    VideoMemberWidget.cpp \
+    VideoWSClient.cpp \
     WSClient.cpp \
     calldialog.cpp \
     callwindow.cpp \
-    callwsclient.cpp \
     groupwidget.cpp \
     main.cpp \
     mainwindow.cpp \
@@ -24,15 +25,17 @@ HEADERS += \
     EventHandler.h \
     UI_UpdateTypes.h \
     UserData.h \
+    VideoMemberWidget.h \
+    VideoWSClient.h \
     WSClient.h \
     calldialog.h \
     callwindow.h \
-    callwsclient.h \
     groupwidget.h \
     mainwindow.h \
     messagewidget.h
 
 FORMS += \
+    VideoMemberWidget.ui \
     calldialog.ui \
     callwindow.ui \
     groupwidget.ui \

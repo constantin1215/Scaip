@@ -1,13 +1,15 @@
 #ifndef CALLWINDOW_H
 #define CALLWINDOW_H
 
+#include "VideoMemberWidget.h"
 #include "qjsonobject.h"
 #include "qvideoframe.h"
 #include <QDialog>
+#include <QJsonArray>
 #include <QMediaCaptureSession>
 #include <QMediaPlayer>
 #include <QVideoWidget>
-#include <callwsclient.h>
+#include <VideoWSClient.h>
 
 namespace Ui {
 class CallWindow;
@@ -21,6 +23,12 @@ public:
     explicit CallWindow(QWidget *parent = nullptr, QJsonObject* eventData = nullptr);
     ~CallWindow();
 
+public Q_SLOTS:
+    void onNewVideoWidget(QString username);
+    void onNewVideoWidgets(QJsonArray members);
+    void onRemovingVideoWidget(QString username);
+    void onUpdateFrame(QString userId, QByteArray frameData);
+
 private slots:
     void on_toggleVideoButton_clicked();
 
@@ -33,7 +41,10 @@ private:
     QMediaPlayer *player;
     QVideoWidget *videoWidget;
     QMediaRecorder *recorder;
-    CallWSClient *client;
+    VideoWSClient *client;
+    QMap<QString, VideoMemberWidget*> videoWidgets;
+
+    QByteArray userIdBin;
 };
 
 #endif // CALLWINDOW_H

@@ -17,7 +17,6 @@ QString eventToString(Events event) {
         return "FETCH_PROFILE";
     case Events::FETCH_MESSAGES:
         return "FETCH_MESSAGES";
-        break;
     }
 }
 
