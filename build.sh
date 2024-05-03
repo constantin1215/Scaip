@@ -30,4 +30,12 @@ cd call-microservice
 ./gradlew build clean
 ./gradlew build -Dquarkus.container-image.build=true -Dquarkus.container-image.image="constatin1215/calls-ms:v1"
 cd ..
+cd video-microservice
+./gradlew build clean
+./gradlew build -Dquarkus.container-image.build=true -Dquarkus.container-image.image="constatin1215/video-ms:v1"
+cd ..
+cd audio-microservice
+./gradlew build clean
+./gradlew build -Dquarkus.container-image.build=true -Dquarkus.container-image.image="constatin1215/audio-ms:v1"
+cd ..
 docker compose up

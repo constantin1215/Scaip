@@ -116,6 +116,21 @@ services:
       - "8080:8080"
     depends_on:
       - kafka
+      - redis-gateway
+  video-microservice:
+    container_name: "video-ms"
+    image: constatin1215/video-ms:v1
+    ports:
+      - "8081:8081"
+    depends_on:
+      - kafka
+  audio-microservice:
+    container_name: "audio-ms"
+    image: constatin1215/audio-ms:v1
+    ports:
+      - "8082:8082"
+    depends_on:
+      - kafka
   users-microservice:
     container_name: "users-ms"
     image: constatin1215/users-ms:v1

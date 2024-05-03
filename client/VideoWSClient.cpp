@@ -70,13 +70,13 @@ void VideoWSClient::onBinaryMessageReceived(QByteArray data)
 void VideoWSClient::handleJoinedVideo(QJsonObject jsonObject)
 {
     if (!jsonObject["userId"].isNull()) {
-        qDebug() << "Adding 1 member to video";
+        //qDebug() << "Adding 1 member to video";
         QString userId = jsonObject["userId"].toString();
         emit addNewVideoWidget(userId);
     }
 
     if (!jsonObject["members"].isNull()) {
-        qDebug() << "Adding multiple members to video";
+        //qDebug() << "Adding multiple members to video";
         QJsonArray members = jsonObject["members"].toArray();
         emit addNewVideoWidgets(members);
     }
@@ -85,7 +85,7 @@ void VideoWSClient::handleJoinedVideo(QJsonObject jsonObject)
 void VideoWSClient::handleLeftVideo(QJsonObject jsonObject)
 {
     if(!jsonObject["userId"].isNull()) {
-        qDebug() << "Removing member from video";
+        //qDebug() << "Removing member from video";
         emit removeVideoWidget(jsonObject["userId"].toString());
     }
 }

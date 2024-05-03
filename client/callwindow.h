@@ -4,6 +4,9 @@
 #include "VideoMemberWidget.h"
 #include "qjsonobject.h"
 #include "qvideoframe.h"
+#include <AudioWSClient.h>
+#include <QAudioSink>
+#include <QAudioSource>
 #include <QDialog>
 #include <QJsonArray>
 #include <QMediaCaptureSession>
@@ -28,23 +31,39 @@ public Q_SLOTS:
     void onNewVideoWidgets(QJsonArray members);
     void onRemovingVideoWidget(QString username);
     void onUpdateFrame(QString userId, QByteArray frameData);
+    void onUpdateAudio(QString userId, QByteArray audioData);
 
 private slots:
     void on_toggleVideoButton_clicked();
 
     void on_leaveCallButton_clicked();
     void processFrame(const QVideoFrame &frame);
+    void handleAudioState(QAudio::State newState);
+    void processSamples(QByteArray data);
+
+    void on_audioToggleButton_clicked();
 
 private:
     Ui::CallWindow *ui;
     QMediaCaptureSession *session;
     QMediaPlayer *player;
     QVideoWidget *videoWidget;
-    QMediaRecorder *recorder;
-    VideoWSClient *client;
+    VideoWSClient *videoClient;
+    AudioWSClient *audioClient;
+    QAudioSource *audioSource;
+    QIODevice* inputSource;
+    QAudioSink *audioSink;
+    QIODevice *audioOutputDevice;
     QMap<QString, VideoMemberWidget*> videoWidgets;
 
     QByteArray userIdBin;
+
+    void initVideoClient(QString channel);
+    void initCamera();
+    void initAudioClient(QString channel);
+    void checkPermissions();
+    void initAudioInput();
+    void initAudioOutput();
 };
 
 #endif // CALLWINDOW_H

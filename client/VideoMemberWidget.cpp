@@ -9,8 +9,10 @@ VideoMemberWidget::VideoMemberWidget(QWidget *parent,
     , ui(new Ui::VideoMemberWidget)
 {
     ui->setupUi(this);
-    videoWidget->setParent(this);
     ui->usernameLabel->setText(username);
+
+    if (videoWidget)
+        videoWidget->setParent(this);
 
     if (type == VideoType::SELF) {
         videoWidget->setMinimumHeight(270);
@@ -19,7 +21,6 @@ VideoMemberWidget::VideoMemberWidget(QWidget *parent,
     else {
         videoMock = new QLabel(this);
         videoMock->setMinimumHeight(270);
-        //videoMock->setScaledContents(true);
         ui->verticalLayout->addWidget(videoMock, Qt::AlignCenter);
     }
 
