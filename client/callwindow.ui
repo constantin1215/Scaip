@@ -33,6 +33,9 @@
       </spacer>
      </item>
      <item>
+      <widget class="QComboBox" name="comboBoxAudioInputs"/>
+     </item>
+     <item>
       <widget class="QPushButton" name="toggleVideoButton">
        <property name="text">
         <string>Video Toggle</string>

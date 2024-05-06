@@ -94,7 +94,7 @@
     <item>
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="main_page">
        <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -1335,6 +1335,16 @@
            </spacer>
           </item>
           <item>
+           <widget class="QLabel" name="loading_gif_register">
+            <property name="text">
+             <string/>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="verticalSpacer_5">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -2041,6 +2051,13 @@
                            </size>
                           </property>
                          </spacer>
+                        </item>
+                        <item>
+                         <widget class="QPushButton" name="membersButton">
+                          <property name="text">
+                           <string>Members</string>
+                          </property>
+                         </widget>
                         </item>
                        </layout>
                       </item>

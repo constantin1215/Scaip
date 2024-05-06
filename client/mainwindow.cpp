@@ -40,7 +40,8 @@ enum class CallTypes {
     SCHEDULED
 };
 
-QHash<QString, QList<QJsonObject>> groupConversations;
+QMap<QString, QList<QJsonObject>> groupConversations;
+QMap<QString, int> groupLastMessagesFetchedCount;
 
 QString eventToString(EventsUI event) {
     switch(event) {
@@ -144,6 +145,49 @@ void MainWindow::handleProfileFetchUpdate()
     });
 }
 
+void MainWindow::prependNewMessages(QJsonArray recentMessages, QString groupId)
+{
+    delete ui->messagesListWidget->takeItem(0);
+
+    for(int i = recentMessages.count() - 1; i >= 0; i--) {
+        QJsonObject messageObject = recentMessages.at(i).toObject();
+        groupConversations[groupId].prepend(messageObject);
+    }
+
+    ui->messagesListWidget->clear();
+
+    for (int i = 0; i < groupConversations[groupId].count(); i++) {
+        MessageWidget *widget = new MessageWidget(
+            this,
+            groupConversations[groupId].at(i)["_id"].toString(),
+            groupConversations[groupId].at(i)["userId"].toString(),
+            groupConversations[groupId].at(i)["content"].toString(),
+            groupConversations[groupId].at(i)["timestamp"].toInteger()
+            );
+
+
+        QListWidgetItem *item = new QListWidgetItem(ui->messagesListWidget);
+
+        item->setSizeHint(widget->sizeHint());
+        ui->messagesListWidget->setItemWidget(item, widget);
+    }
+
+    if (recentMessages.size() == 20) {
+        QPushButton *loadMoreMessagesButton = new QPushButton("Load more", this);
+        QListWidgetItem *item = new QListWidgetItem();
+
+        item->setSizeHint(loadMoreMessagesButton->sizeHint());
+        ui->messagesListWidget->insertItem(0, item);
+        ui->messagesListWidget->setItemWidget(item, loadMoreMessagesButton);
+
+        connect(loadMoreMessagesButton, &QPushButton::clicked, this, [this, groupId, recentMessages]() {
+            emit fetchMessages(groupId, recentMessages.at(0).toObject()["timestamp"].toInteger());
+        });
+    }
+
+    ui->messagesListWidget->scrollToTop();
+}
+
 void MainWindow::handleGroupChatConversationUpdate(QJsonObject eventData)
 {
     if (eventData["_id"].isNull() || eventData["recentMessages"].isNull()) {
@@ -153,6 +197,28 @@ void MainWindow::handleGroupChatConversationUpdate(QJsonObject eventData)
 
     QString groupId = eventData["_id"].toString();
     QJsonArray recentMessages = eventData["recentMessages"].toArray();
+
+    groupLastMessagesFetchedCount[groupId] = recentMessages.size();
+
+    if (recentMessages.empty())
+        return;
+
+    if (!groupConversations[groupId].empty()) {
+        prependNewMessages(recentMessages, groupId);
+        return;
+    }
+
+    if (recentMessages.size() == 20) {
+        QPushButton *loadMoreMessagesButton = new QPushButton("Load more", this);
+        QListWidgetItem *item = new QListWidgetItem(ui->messagesListWidget);
+
+        item->setSizeHint(loadMoreMessagesButton->sizeHint());
+        ui->messagesListWidget->setItemWidget(item, loadMoreMessagesButton);
+
+        connect(loadMoreMessagesButton, &QPushButton::clicked, this, [this, groupId, recentMessages]() {
+            emit fetchMessages(groupId, recentMessages.at(0).toObject()["timestamp"].toInteger());
+        });
+    }
 
     for(int i = 0; i < recentMessages.count(); i++) {
         QJsonObject messageObject = recentMessages.at(i).toObject();
@@ -304,6 +370,12 @@ void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
             qDebug() << "Type: JOIN_CALL";
             handleJoinCall(eventData);
             break;
+        case UI_UpdateType::LOG_IN_FAILED:
+            break;
+        case UI_UpdateType::REGISTRATION_FAILED:
+            break;
+        case UI_UpdateType::REGISTRATION_SUCCEEDED:
+            break;
         }
 }
 
@@ -341,6 +413,19 @@ void MainWindow::on_log_in_Button_clicked()
     QString username = ui->input_username_log_in->text();
     QString password = ui->input_password_log_in->text();
 
+    if (username.length() < 4 || password.length() < 4 || username.length() > 16 || password.length() > 16) {
+        ui->backButton_2->setEnabled(true);
+        ui->log_in_Button->setEnabled(true);
+
+        ui->loading_gif_login->setMovie(nullptr);
+        this->loadingGif->stop();
+
+        ui->loading_gif_login->setStyleSheet("color: #AA1111");
+        ui->loading_gif_login->setText("Invalid username or password!");
+
+        return;
+    }
+
     QJsonObject event;
     event.insert("EVENT", eventToString(EventsUI::LOG_IN));
     event.insert("username", username);
@@ -354,11 +439,30 @@ void MainWindow::on_log_in_Button_clicked()
 
 void MainWindow::on_register_Button_clicked()
 {
+    ui->backButton->setEnabled(false);
+    ui->register_Button->setEnabled(false);
+    ui->loading_gif_register->setMovie(this->loadingGif);
+    this->loadingGif->start();
+
     QString username = ui->input_username_register->text();
     QString password = ui->input_password_register->text();
     QString email = ui->input_email_register->text();
     QString firstName = ui->input_first_name_register->text();
     QString lastName = ui->input_last_name_register->text();
+
+    if (username.length() < 4 || password.length() < 4 || email.length() < 4 || firstName.length() < 4 || lastName.length() < 4 ||
+        username.length() > 16 || password.length() > 16 || email.length() > 16 || firstName.length() > 16 || lastName.length() > 16) {
+        ui->backButton->setEnabled(true);
+        ui->register_Button->setEnabled(true);
+
+        ui->loading_gif_register->setMovie(nullptr);
+        this->loadingGif->stop();
+
+        ui->loading_gif_login->setStyleSheet("color: #AA1111");
+        ui->loading_gif_login->setText("Invalid inputs!");
+
+        return;
+    }
 
     QJsonObject event;
 
@@ -404,6 +508,19 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
                 }
 
                 QList<QJsonObject> messages = groupConversations[groupWidget->getId()];
+
+                if (!messages.empty() && groupLastMessagesFetchedCount[groupWidget->getId()] == 20) {
+                    QPushButton *loadMoreMessagesButton = new QPushButton("Load more", this);
+                    QListWidgetItem *item = new QListWidgetItem(ui->messagesListWidget);
+
+                    item->setSizeHint(loadMoreMessagesButton->sizeHint());
+                    ui->messagesListWidget->setItemWidget(item, loadMoreMessagesButton);
+
+                    connect(loadMoreMessagesButton, &QPushButton::clicked, this, [this, groupWidget, messages]() {
+                        emit fetchMessages(groupWidget->getId(), messages.at(0)["timestamp"].toInteger());
+                    });
+                }
+
                 for(int i = 0;i < messages.count(); i++) {
                     QListWidgetItem *item = new QListWidgetItem(ui->messagesListWidget);
 

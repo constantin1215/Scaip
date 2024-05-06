@@ -108,16 +108,19 @@ void EventHandler::handleLogInSuccess(QJsonObject eventData)
 void EventHandler::handleLogInFail(QJsonObject eventData)
 {
     qDebug() << "Handling LOG_IN_FAIL\n";
+    emit updateUI(UI_UpdateType::LOG_IN_FAILED, eventData);
 }
 
 void EventHandler::handleRegisterSuccess(QJsonObject eventData)
 {
     qDebug() << "Handling REGISTRATION_SUCCESS\n";
+    emit updateUI(UI_UpdateType::REGISTRATION_SUCCEEDED, eventData);
 }
 
 void EventHandler::handleRegisterFail(QJsonObject eventData)
 {
     qDebug() << "Handling REGISTRATION_FAIL\n";
+    emit updateUI(UI_UpdateType::REGISTRATION_FAILED, eventData);
 }
 
 void EventHandler::handleFetchedMessages(QJsonObject eventData)

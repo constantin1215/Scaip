@@ -35,13 +35,13 @@ public Q_SLOTS:
 
 private slots:
     void on_toggleVideoButton_clicked();
-
     void on_leaveCallButton_clicked();
+    void on_audioToggleButton_clicked();
+
     void processFrame(const QVideoFrame &frame);
     void handleAudioState(QAudio::State newState);
     void processSamples(QByteArray data);
-
-    void on_audioToggleButton_clicked();
+    void handleInputDeviceChange(int index);
 
 private:
     Ui::CallWindow *ui;
@@ -55,6 +55,7 @@ private:
     QAudioSink *audioSink;
     QIODevice *audioOutputDevice;
     QMap<QString, VideoMemberWidget*> videoWidgets;
+    bool mockMode = false;
 
     QByteArray userIdBin;
 
@@ -62,7 +63,7 @@ private:
     void initCamera();
     void initAudioClient(QString channel);
     void checkPermissions();
-    void initAudioInput();
+    void initAudioInput(const QAudioDevice &deviceInfo);
     void initAudioOutput();
 };
 

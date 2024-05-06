@@ -29,6 +29,8 @@ public:
     void handleInstantCall(QJsonObject eventData);
     void handleJoinCall(QJsonObject eventData);
 
+void prependNewMessages(QJsonArray recentMessages, QString groupId);
+
 Q_SIGNALS:
     void fetchMessages(QString groupId, qint64 timestamp);
 public Q_SLOTS:

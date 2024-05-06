@@ -45,7 +45,26 @@ CallWindow::CallWindow(QWidget *parent, QJsonObject* eventData)
     initCamera();
     initAudioClient(channel);
     checkPermissions();
-    initAudioInput();
+
+    const QList<QAudioDevice> audioInputDevices = QMediaDevices::audioInputs();
+
+    if (audioInputDevices.empty()) {
+        qDebug() << "No audio inputs detected!";
+        return;
+    }
+
+    qDebug() << audioInputDevices.size();
+
+    const QAudioDevice &defaultAudioInputDevice = QMediaDevices::defaultAudioInput();
+    ui->comboBoxAudioInputs->addItem(defaultAudioInputDevice.description(), QVariant::fromValue(defaultAudioInputDevice));
+
+    for(const QAudioDevice &device : audioInputDevices)
+        if (device != defaultAudioInputDevice)
+            ui->comboBoxAudioInputs->addItem(device.description(), QVariant::fromValue(device));
+
+    connect(ui->comboBoxAudioInputs, &QComboBox::activated, this, &CallWindow::handleInputDeviceChange);
+
+    initAudioInput(defaultAudioInputDevice);
     initAudioOutput();
 }
 
@@ -81,6 +100,8 @@ void CallWindow::initCamera()
             player->setSource(QUrl("http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"));
             player->setVideoOutput(videoWidget);
             player->play();
+            ui->toggleVideoButton->setDisabled(true);
+            mockMode = true;
         });
     }
 
@@ -131,28 +152,37 @@ void CallWindow::checkPermissions()
 #endif
 }
 
-void CallWindow::initAudioInput()
+void CallWindow::initAudioInput(const QAudioDevice &device)
 {
-    const QList<QAudioDevice> audioInputDevices = QMediaDevices::audioInputs();
-
-    if (audioInputDevices.empty()) {
-        qDebug() << "No audio inputs detected!";
+    if (mockMode) {
+        ui->audioToggleButton->setDisabled(true);
         return;
     }
-    else {
-        QAudioInput* audioInput = new QAudioInput(audioInputDevices[0], this);
-        session->setAudioInput(audioInput);
-        session->audioInput()->setMuted(true);
+
+    QAudioInput* audioInput = new QAudioInput(device, this);
+
+    if(!audioInput) {
+        qDebug() << "Could not create new Audio Input!";
+        return;
     }
 
-    QAudioFormat formatInput = audioInputDevices[0].preferredFormat();
+    session->setAudioInput(audioInput);
+
+    if (!session->audioInput()) {
+        qDebug() << "Session audio input is null!";
+        return;
+    }
+
+    session->audioInput()->setMuted(true);
+
+    QAudioFormat formatInput = device.preferredFormat();
 
     if(!formatInput.isValid()) {
         qDebug() << "Invalid input audio format!";
         return;
     }
 
-    audioSource = new QAudioSource(audioInputDevices[0], formatInput);
+    audioSource = new QAudioSource(device, formatInput);
 
     if(!audioSource) {
         qDebug() << "Failed to create audio source!";
@@ -176,11 +206,11 @@ void CallWindow::initAudioInput()
         qint64 bytesRead = inputSource->read(buffer.data(), len);
 
         if (bytesRead > 0 && !session->audioInput()->isMuted()) {
-            qDebug() << "Reading bytes! " << bytesRead;
+            //qDebug() << "Reading bytes! " << bytesRead;
             processSamples(buffer);
         }
-        else
-            qDebug() << "Muted or no bytes!";
+        // else
+        //     qDebug() << "Muted or no bytes!";
     });
 }
 
@@ -291,20 +321,30 @@ void CallWindow::on_leaveCallButton_clicked()
 
 void CallWindow::processFrame(const QVideoFrame &frame)
 {
-    QImage image = frame.toImage();
+    QImage image = frame.toImage().convertToFormat(QImage::Format_RGB888);
+    image = image.scaled(image.width() / 2, image.height() / 2, Qt::KeepAspectRatio);
     QByteArray arr;
     QBuffer buffer(&arr);
     buffer.open(QIODevice::WriteOnly);
     image.save(&buffer, "JPG");
 
     buffer.buffer().prepend(this->userIdBin);
-
+    //qDebug() << "Frame size regular: " << buffer.buffer().size();
     videoClient->sendFrame(buffer.data());
 }
 
 void CallWindow::processSamples(QByteArray data)
 {
     audioClient->sendSamples(data.prepend(this->userIdBin));
+}
+
+void CallWindow::handleInputDeviceChange(int index)
+{
+    session->setAudioInput(nullptr);
+    audioSource->stop();
+    audioSource->disconnect(this);
+
+    initAudioInput(ui->comboBoxAudioInputs->itemData(index).value<QAudioDevice>());
 }
 
 void CallWindow::handleAudioState(QAudio::State newState)
