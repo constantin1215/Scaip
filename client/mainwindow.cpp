@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "NewGroupDialog.h"
 #include "ui_mainwindow.h"
 
 #include <QJsonArray>
@@ -82,11 +83,26 @@ MainWindow::MainWindow(QWidget *parent, WSClient *client)
 
     ui->input_username_log_in->setText("costi1");
     ui->input_password_log_in->setText("1234");
+
+    ui->input_username_register->setText("costix");
+    ui->input_password_register->setText("1234");
+    ui->input_email_register->setText("costix@mail.com");
+    ui->input_first_name_register->setText("costi");
+    ui->input_last_name_register->setText("ciobanu");
+
+    ui->logoMain->setPixmap(this->logo->copy().scaled(ui->logoMain->width(), ui->logoMain->height(), Qt::KeepAspectRatio));
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+}
+
+inline void swap(QJsonValueRef v1, QJsonValueRef v2)
+{
+    QJsonValue temp(v1);
+    v1 = QJsonValue(v2);
+    v2 = temp;
 }
 
 void MainWindow::handleProfileFetchUpdate()
@@ -104,6 +120,15 @@ void MainWindow::handleProfileFetchUpdate()
     ui->input_last_name_profile->setText(instance->getLastName());
 
     QJsonArray groups = instance->getGroups();
+    std::sort(groups.begin(), groups.end(), [](const QJsonValue &v1, const QJsonValue &v2) {
+        return v1.toObject()
+                    ["lastMessage"].toObject()
+                    ["timestamp$delegate"].toObject()
+                    ["value"].toDouble() > v2.toObject()
+                                                ["lastMessage"].toObject()
+                                                ["timestamp$delegate"].toObject()
+                                                ["value"].toDouble();
+    });
     ui->groupListWidget->setResizeMode(QListView::Adjust);
 
     for(int i = 0;i < groups.size(); i++) {
@@ -343,6 +368,42 @@ void MainWindow::handleJoinCall(QJsonObject eventData)
     callWindow->exec();
 }
 
+void MainWindow::handleLogInFail(QJsonObject eventData)
+{
+    ui->backButton_2->setEnabled(true);
+    ui->log_in_Button->setEnabled(true);
+
+    ui->loading_gif_login->setMovie(nullptr);
+    this->loadingGif->stop();
+
+    ui->loading_gif_login->setStyleSheet("color: #AA1111");
+    ui->loading_gif_login->setText(eventData["message"].toString());
+}
+
+void MainWindow::handleRegisterFail(QJsonObject eventData)
+{
+    ui->backButton->setEnabled(true);
+    ui->register_Button->setEnabled(true);
+
+    ui->loading_gif_register->setMovie(nullptr);
+    this->loadingGif->stop();
+
+    ui->loading_gif_register->setStyleSheet("color: #AA1111");
+    ui->loading_gif_register->setText(eventData["message"].toString());
+}
+
+void MainWindow::handleRegisterSuccess(QJsonObject eventData)
+{
+    ui->backButton->setEnabled(true);
+    ui->register_Button->setEnabled(true);
+
+    ui->loading_gif_register->setMovie(nullptr);
+    this->loadingGif->stop();
+
+    ui->loading_gif_register->setStyleSheet("color: #11AA11");
+    ui->loading_gif_register->setText(eventData["message"].toString());
+}
+
 void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
 {
     qDebug() << "Updating UI";
@@ -371,10 +432,16 @@ void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
             handleJoinCall(eventData);
             break;
         case UI_UpdateType::LOG_IN_FAILED:
+            qDebug() << "Type: LOG_IN_FAILED";
+            handleLogInFail(eventData);
             break;
         case UI_UpdateType::REGISTRATION_FAILED:
+            qDebug() << "Type: REGISTRATION_FAILED";
+            handleRegisterFail(eventData);
             break;
         case UI_UpdateType::REGISTRATION_SUCCEEDED:
+            qDebug() << "Type: REGISTRATION_SUCCEEDED";
+            handleRegisterSuccess(eventData);
             break;
         }
 }
@@ -450,16 +517,16 @@ void MainWindow::on_register_Button_clicked()
     QString firstName = ui->input_first_name_register->text();
     QString lastName = ui->input_last_name_register->text();
 
-    if (username.length() < 4 || password.length() < 4 || email.length() < 4 || firstName.length() < 4 || lastName.length() < 4 ||
-        username.length() > 16 || password.length() > 16 || email.length() > 16 || firstName.length() > 16 || lastName.length() > 16) {
+    if (username.length() < 4 || password.length() < 4 || email.length() < 4 || firstName.length() < 1 || lastName.length() < 1 ||
+        username.length() > 16 || password.length() > 16 || email.length() > 32 || firstName.length() > 24 || lastName.length() > 24) {
         ui->backButton->setEnabled(true);
         ui->register_Button->setEnabled(true);
 
         ui->loading_gif_register->setMovie(nullptr);
         this->loadingGif->stop();
 
-        ui->loading_gif_login->setStyleSheet("color: #AA1111");
-        ui->loading_gif_login->setText("Invalid inputs!");
+        ui->loading_gif_register->setStyleSheet("color: #AA1111");
+        ui->loading_gif_register->setText("Invalid inputs!");
 
         return;
     }
@@ -502,10 +569,10 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
             if (groupWidget) {
                 ui->stackedWidget_groups->setCurrentIndex(static_cast<int>(GroupStatus::GROUP_SELECTED));
                 ui->hiddenGroupId->setText(groupWidget->getId());
+                ui->selectedGroupName_label->setText(groupWidget->getGroupName());
 
-                if (ui->messagesListWidget->count() > 0) {
+                if (ui->messagesListWidget->count() > 0)
                     ui->messagesListWidget->clear();
-                }
 
                 QList<QJsonObject> messages = groupConversations[groupWidget->getId()];
 
@@ -580,5 +647,16 @@ void MainWindow::on_callButton_clicked()
     QJsonDocument json(event);
 
     this->client->sendEvent(QString::fromUtf8(json.toJson(QJsonDocument::Indented)));
+}
+
+
+void MainWindow::on_createGroupButton_clicked()
+{
+    NewGroupDialog *newGroupDialog = new NewGroupDialog(this);
+    newGroupDialog->exec();
+
+    if (newGroupDialog->result() == QDialog::Accepted) {
+        qDebug() << "Creating group!";
+    }
 }
 

@@ -1,6 +1,7 @@
 package entity
 
 import jakarta.persistence.*
+import jakarta.validation.constraints.Email
 
 @Entity
 @Table(name = "\"User\"")
@@ -13,6 +14,7 @@ class User() {
     @Column(nullable = false)
     lateinit var password : String
     @Column(nullable = false, unique = true, length = 200)
+    @Email(message = "Email not valid!")
     lateinit var email : String
     @Column(nullable = false, length = 100)
     lateinit var firstName : String

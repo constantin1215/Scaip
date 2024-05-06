@@ -11,6 +11,7 @@ CONFIG += c++17
 SOURCES += \
     AudioWSClient.cpp \
     EventHandler.cpp \
+    NewGroupDialog.cpp \
     UserData.cpp \
     VideoMemberWidget.cpp \
     VideoWSClient.cpp \
@@ -25,6 +26,7 @@ SOURCES += \
 HEADERS += \
     AudioWSClient.h \
     EventHandler.h \
+    NewGroupDialog.h \
     UI_UpdateTypes.h \
     UserData.h \
     VideoMemberWidget.h \
@@ -37,6 +39,7 @@ HEADERS += \
     messagewidget.h
 
 FORMS += \
+    NewGroupDialog.ui \
     VideoMemberWidget.ui \
     calldialog.ui \
     callwindow.ui \

@@ -41,6 +41,11 @@ bool GroupWidget::getOpenedStatus()
     return this->wasOpened;
 }
 
+QString GroupWidget::getGroupName()
+{
+    return this->groupName;
+}
+
 void GroupWidget::setOpenedStatus(bool status)
 {
     this->wasOpened = status;

@@ -206,6 +206,11 @@ class GatewayWebsocket {
 
                 Event.REGISTRATION_SUCCESS -> {
                     logger.info("Successful registration from session $session")
+
+                    if (sessions[session] != null)
+                        sessions[session]!!.asyncRemote.sendText(gson.toJson(mapOf("EVENT" to data["EVENT"], "message" to "Successfully registered! Please log in!")))
+
+                    return@executeBlocking
                 }
 
                 Event.UPDATE_USER_SUCCESS -> {

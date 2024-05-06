@@ -109,6 +109,8 @@ class CallMicroservice {
             logger.warn("User with ID: ${ex.userId} not found while handling EVENT: ${ex.event}")
         } catch (ex : GroupNotFound) {
             logger.warn("Group with ID: ${ex.groupId} not found while handling EVENT: ${ex.event}")
+        } catch (ex : Unauthorized) {
+            logger.warn(ex.message)
         }
     }
 

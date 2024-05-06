@@ -2,15 +2,14 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import entity.User
 import entity.UserEvent
-import exceptions.EmailAlreadyExists
-import exceptions.IdNotProvided
-import exceptions.UserDoesNotExist
-import exceptions.UsernameAlreadyExists
+import exceptions.*
 import io.quarkus.elytron.security.common.BcryptUtil
 import io.smallrye.reactive.messaging.kafka.Record
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.transaction.Transactional
+import jakarta.validation.ConstraintViolationException
+import jakarta.validation.Validator
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.eclipse.microprofile.reactive.messaging.Channel
 import org.eclipse.microprofile.reactive.messaging.Emitter
@@ -39,6 +38,9 @@ class UsersMicroservice {
 
     @Inject
     lateinit var outboxRepository: OutboxRepository
+
+    @Inject
+    lateinit var validator : Validator
 
     @Incoming("users_topic")
     @Transactional
@@ -108,6 +110,14 @@ class UsersMicroservice {
                 "The id of the user was not provided.",
                 headers["SESSION_ID"] as String
             ))
+        } catch (ex : ConstraintViolated) {
+            outboxRepository.persist(UserEvent(
+                headers["EVENT"] as String,
+                getFailedEvent(headers["EVENT"] as String).toString(),
+                msg.value(),
+                ex.message!!,
+                headers["SESSION_ID"] as String
+            ))
         }
     }
 
@@ -168,14 +178,21 @@ class UsersMicroservice {
             throw UsernameAlreadyExists()
         }
 
+        val user = User(
+            data["username"] as String,
+            BcryptUtil.bcryptHash(data["password"] as String),
+            data["email"] as String,
+            data["firstName"] as String,
+            data["lastName"] as String
+        )
+
+        if (validator.validate(user).isNotEmpty()) {
+            logger.info("Constraint violated on registration!")
+            throw ConstraintViolated("Please check your email address!")
+        }
+
         userRepository.persist(
-            User(
-                data["username"] as String,
-                BcryptUtil.bcryptHash(data["password"] as String),
-                data["email"] as String,
-                data["firstName"] as String,
-                data["lastName"] as String
-            )
+            user
         )
 
         outboxRepository.persist(

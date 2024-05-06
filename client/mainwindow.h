@@ -28,6 +28,9 @@ public:
     void handleGroupChatNewMessage(QJsonObject eventData);
     void handleInstantCall(QJsonObject eventData);
     void handleJoinCall(QJsonObject eventData);
+    void handleLogInFail(QJsonObject eventData);
+    void handleRegisterFail(QJsonObject eventData);
+    void handleRegisterSuccess(QJsonObject eventData);
 
 void prependNewMessages(QJsonArray recentMessages, QString groupId);
 
@@ -59,9 +62,12 @@ private slots:
 
     void on_callButton_clicked();
 
+    void on_createGroupButton_clicked();
+
 private:
     Ui::MainWindow *ui;
     WSClient *client;
     QMovie *loadingGif = new QMovie(":/gifs/loading.gif");
+    QPixmap *logo = new QPixmap(":/images/logo-black.png");
 };
 #endif // MAINWINDOW_H

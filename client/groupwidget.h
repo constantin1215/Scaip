@@ -19,6 +19,7 @@ public:
     QString getId();
     qint64 getTimestmap();
     bool getOpenedStatus();
+    QString getGroupName();
 
     void setOpenedStatus(bool status);
     void setLastMessage(QString lastMessage);

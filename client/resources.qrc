@@ -5,4 +5,8 @@
     <qresource prefix="/gifs">
         <file>loading.gif</file>
     </qresource>
+    <qresource prefix="/images">
+        <file>logo-no-background.png</file>
+        <file>logo-black.png</file>
+    </qresource>
 </RCC>
