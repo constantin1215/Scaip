@@ -291,7 +291,8 @@ void CallWindow::onRemovingVideoWidget(QString username)
 
 void CallWindow::onUpdateFrame(QString userId, QByteArray frameData)
 {
-    videoWidgets[userId]->updateFrame(frameData);
+    if (userId != UserData::getInstance()->getId())
+        videoWidgets[userId]->updateFrame(frameData);
 }
 
 void CallWindow::onUpdateAudio(QString userId, QByteArray audioData)

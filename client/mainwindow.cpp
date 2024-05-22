@@ -359,7 +359,7 @@ void MainWindow::handleInstantCall(QJsonObject eventData)
 
 void MainWindow::handleJoinCall(QJsonObject eventData)
 {
-    if (eventData["_id"].isNull() || eventData["channel"].isNull()) {
+    if (eventData["_id"].isNull() || eventData["channel"].isNull() || eventData["channel"].toString().isEmpty()) {
         qDebug() << "Missing mandatory fields on joining call!";
         return;
     }
