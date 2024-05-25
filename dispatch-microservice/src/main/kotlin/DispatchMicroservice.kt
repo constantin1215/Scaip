@@ -1,5 +1,4 @@
 import com.google.gson.Gson
-import com.google.gson.internal.LinkedTreeMap
 import com.google.gson.reflect.TypeToken
 import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata
 import jakarta.enterprise.context.ApplicationScoped
@@ -11,7 +10,7 @@ import org.eclipse.microprofile.reactive.messaging.Emitter
 import org.eclipse.microprofile.reactive.messaging.Incoming
 import org.eclipse.microprofile.reactive.messaging.Message
 import org.jboss.logging.Logger
-import kotlin.reflect.typeOf
+import java.util.concurrent.CompletableFuture
 
 @ApplicationScoped
 class DispatchMicroservice {
@@ -44,6 +43,7 @@ class DispatchMicroservice {
         NEW_CALL_SUCCESS,
         NEW_CALL_FAIL,
         JOIN_CALL,
+        FETCH_GROUP_MEMBERS
     }
 
     private val gson = Gson()
@@ -78,6 +78,14 @@ class DispatchMicroservice {
     @Channel("call_topic")
     lateinit var callEmitter : Emitter<String>
 
+    @Inject
+    @Channel("video_call_topic")
+    lateinit var videoEmitter : Emitter<String>
+
+    @Inject
+    @Channel("audio_call_topic")
+    lateinit var audioEmitter : Emitter<String>
+
     @Incoming("dispatch_topic")
     fun consume(msg: ConsumerRecord<String, String>) {
         try {
@@ -101,6 +109,7 @@ class DispatchMicroservice {
                 Event.UPDATE_USER -> usersEmitter.send(newMsg)
 
                 Event.FETCH_USERS_BY_QUERY,
+                Event.FETCH_GROUP_MEMBERS,
                 Event.FETCH_PROFILE -> queryEmitter.send(newMsg)
 
                 Event.CREATE_GROUP,
@@ -204,7 +213,9 @@ class DispatchMicroservice {
                     gatewayMs = true,
                     queryMs = true,
                     messageMs = true,
-                    callMs = true
+                    callMs = true,
+                    videoMs = true,
+                    audioMs = true
                 )
             }
             else -> println("TO DO() handle event $event")
@@ -244,7 +255,9 @@ class DispatchMicroservice {
                 payload,
                 newHeaders,
                 gatewayMs = true,
-                queryMs = true
+                queryMs = true,
+                videoMs = true,
+                audioMs = true
             )
             else -> println("TO DO() handle event $event")
         }
@@ -309,7 +322,9 @@ class DispatchMicroservice {
         queryMs : Boolean = false,
         groupMs : Boolean = false,
         messageMs : Boolean = false,
-        callMs : Boolean = false
+        callMs : Boolean = false,
+        videoMs : Boolean = false,
+        audioMs : Boolean = false
     ) {
         val newMsg = Message
             .of(payload)
@@ -337,5 +352,13 @@ class DispatchMicroservice {
 
         if (callMs)
             callEmitter.send(newMsg)
+
+        if (videoMs)
+            videoEmitter.send(newMsg)
+
+        if (audioMs)
+            audioEmitter.send(newMsg)
+
+        logger.info("Dispatched to Auth: $authMs Gateway: $gatewayMs Query: $queryMs Group: $groupMs Message: $messageMs Call: $callMs Video: $videoMs Audio: $audioMs")
     }
 }

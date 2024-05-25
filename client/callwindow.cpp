@@ -254,8 +254,10 @@ CallWindow::~CallWindow()
         audioSource->stop();
     if (player)
         player->stop();
-    delete player;
-    delete session;
+    if(player)
+        delete player;
+    if (session)
+        delete session;
     delete ui;
 }
 
@@ -323,15 +325,18 @@ void CallWindow::on_leaveCallButton_clicked()
 void CallWindow::processFrame(const QVideoFrame &frame)
 {
     QImage image = frame.toImage().convertToFormat(QImage::Format_RGB888);
-    image = image.scaled(image.width() / 2, image.height() / 2, Qt::KeepAspectRatio);
-    QByteArray arr;
-    QBuffer buffer(&arr);
-    buffer.open(QIODevice::WriteOnly);
-    image.save(&buffer, "JPG");
 
-    buffer.buffer().prepend(this->userIdBin);
-    //qDebug() << "Frame size regular: " << buffer.buffer().size();
-    videoClient->sendFrame(buffer.data());
+    if (!image.isNull()) {
+        image = image.scaled(image.width() / 2, image.height() / 2, Qt::KeepAspectRatio);
+        QByteArray arr;
+        QBuffer buffer(&arr);
+        buffer.open(QIODevice::WriteOnly);
+        image.save(&buffer, "JPG");
+
+        buffer.buffer().prepend(this->userIdBin);
+        //qDebug() << "Frame size regular: " << buffer.buffer().size();
+        videoClient->sendFrame(buffer.data());
+    }
 }
 
 void CallWindow::processSamples(QByteArray data)

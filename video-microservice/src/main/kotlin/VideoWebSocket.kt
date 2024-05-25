@@ -1,19 +1,23 @@
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata
+import io.vertx.core.Vertx
 import jakarta.enterprise.context.ApplicationScoped
 import jakarta.inject.Inject
 import jakarta.websocket.*
 import jakarta.websocket.server.PathParam
 import jakarta.websocket.server.ServerEndpoint
 import org.apache.kafka.clients.consumer.ConsumerConfig
+import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
 import org.eclipse.microprofile.config.ConfigProvider
 import org.eclipse.microprofile.reactive.messaging.Channel
 import org.eclipse.microprofile.reactive.messaging.Emitter
+import org.eclipse.microprofile.reactive.messaging.Incoming
 import org.eclipse.microprofile.reactive.messaging.Message
 import org.jboss.logging.Logger
+import service.StorageService
 import java.nio.ByteBuffer
 import java.time.Duration
 import java.util.*
@@ -28,15 +32,43 @@ class VideoWebSocket {
     var sessions: MutableMap<String, Session> = ConcurrentHashMap()
     var channels: MutableMap<String, MutableList<String>> = mutableMapOf()
     var consumers: MutableMap<String, Thread> = mutableMapOf()
+//    var cancelTasks: MutableMap<String, TimerTask> = mutableMapOf()
 
     private val logger : Logger = Logger.getLogger(this.javaClass)
+
+    enum class Event {
+        CREATE_GROUP_SUCCESS,
+        ADD_MEMBERS_SUCCESS,
+        REMOVE_MEMBERS_SUCCESS,
+        NEW_CALL_SUCCESS
+    }
+
+    @Inject
+    lateinit var storageService : StorageService
+
+    @Inject
+    @Channel("channel-video")
+    lateinit var emitter : Emitter<ByteBuffer>
+
     @OnOpen
     fun onOpen(session: Session?, @PathParam("channel") channel: String, @PathParam("userId") userId: String) {
         logger.info("connection video from $userId to channel: $channel> ${session!!.id}")
         sessions[userId] = session
 
-        if (channels[channel].isNullOrEmpty())
+        if (channels[channel].isNullOrEmpty()) {
             channels[channel] = mutableListOf(userId)
+
+//            val task = object : TimerTask() {
+//                override fun run() {
+//                    logger.info("Closing unknown call!")
+//
+//
+//                }
+//            }
+//            val timer = Timer().schedule(task,1000)
+//
+//            cancelTasks[channel] = task
+        }
         else
             channels[channel]!!.add(userId)
         logger.info(channels)
@@ -53,16 +85,18 @@ class VideoWebSocket {
             val consumer = KafkaConsumer<String, ByteBuffer>(properties)
             consumer.subscribe(Collections.singletonList("video-$channel"))
 
-            val consumerThread = Thread(object : Runnable {
-                override fun run() {
+            val consumerThread = Thread {
+                try {
                     while (true) {
                         val records: ConsumerRecords<String, ByteBuffer> = consumer.poll(Duration.ofSeconds(1))
                         records.forEach {
                             multicastBinary(it.value(), "", channel)
                         }
                     }
+                } catch (err: Exception) {
+                    logger.info("Video streaming stopped for channel $channel!")
                 }
-            })
+            }
 
             consumerThread.start()
 
@@ -80,8 +114,11 @@ class VideoWebSocket {
         sessions.remove(userId)
         channels[channel]!!.remove(userId)
 
-        if (channels[channel]!!.isEmpty())
+        if (channels[channel]!!.isEmpty()) {
             channels.remove(channel)
+//            consumers[channel]!!.interrupt()
+//            consumers.remove(channel)
+        }
 
         logger.info(channels)
         multicastMessage(gson.toJson(mapOf("EVENT" to "LEFT_VIDEO", "userId" to userId)), session.id, channel)
@@ -94,10 +131,6 @@ class VideoWebSocket {
         throwable.printStackTrace()
     }
 
-    @Inject
-    @Channel("channel-video")
-    lateinit var emitter : Emitter<ByteBuffer>
-
     @OnMessage
     fun onMessage(session: Session?, bytes: ByteBuffer, @PathParam("channel") channel: String, @PathParam("userId") userId: String) {
         //logger.info("frame > $bytes")
@@ -107,30 +140,6 @@ class VideoWebSocket {
             .build()
 
         emitter.send(Message.of(bytes).addMetadata(metadata))
-    }
-
-    private fun broadcastBytes(binary: ByteBuffer, self : String) {
-        sessions.values.forEach { s ->
-            if (s.id != self) {
-                s.asyncRemote.sendBinary(binary) { result ->
-                    if (result.exception != null) {
-                        println("Unable to send message: " + result.exception)
-                    }
-                }
-            }
-        }
-    }
-
-    private fun broadcastMessage(message: String, self : String) {
-        sessions.values.forEach { s ->
-            if (s.id != self) {
-                s.asyncRemote.sendText(message) { result ->
-                    if (result.exception != null) {
-                        println("Unable to send message: " + result.exception)
-                    }
-                }
-            }
-        }
     }
 
     private fun multicastMessage(message: String, self: String, channel: String) {
@@ -162,6 +171,43 @@ class VideoWebSocket {
                     if (result.exception != null) {
                         println("Unable to send message: " + result.exception)
                     }
+                }
+            }
+        }
+    }
+
+    @Incoming("video_call_topic")
+    fun consume(msg: ConsumerRecord<String, String>) {
+        val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
+        val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
+        logger.info("Received msg: $headers and ${msg.value()}")
+
+        handleEvent(headers, data)
+    }
+
+    private fun handleEvent(headers: MutableMap<String, String>, data: MutableMap<String, Any>) {
+        Vertx.vertx().executeBlocking { ->
+            when (Event.valueOf(headers["EVENT"] as String)) {
+                Event.CREATE_GROUP_SUCCESS -> {
+                    logger.info("Successful creation of group event received.")
+                    storageService.addGroup(data["id"] as String)
+                    val members = (data["members"] as ArrayList<Map<String, String>>).map { it["id"]!! }.toSet()
+                    storageService.addToSet("GROUP:${data["id"] as String}", members)
+                }
+                Event.ADD_MEMBERS_SUCCESS -> {
+                    logger.info("Users successfully added to group")
+                    val members = (data["members"] as ArrayList<Map<String, String>>).map { it["id"]!! }.toSet()
+                    storageService.addToSet("GROUP:${data["groupId"] as String}", members)
+                }
+                Event.REMOVE_MEMBERS_SUCCESS -> {
+                    logger.info("Users successfully removed from group")
+                    val members = (data["members"] as ArrayList<Map<String, String>>).map { it["id"]!! }.toSet()
+                    storageService.removeFromSet("GROUP:${data["groupId"] as String}", members)
+                }
+                Event.NEW_CALL_SUCCESS -> {
+                    logger.info("Handling new call")
+                    logger.info(data)
+                    logger.info(headers)
                 }
             }
         }
