@@ -13,6 +13,8 @@ SOURCES += \
     EventHandler.cpp \
     NewGroupDialog.cpp \
     UserData.cpp \
+    UserSearchDialog.cpp \
+    UserWidget.cpp \
     VideoMemberWidget.cpp \
     VideoWSClient.cpp \
     WSClient.cpp \
@@ -29,6 +31,8 @@ HEADERS += \
     NewGroupDialog.h \
     UI_UpdateTypes.h \
     UserData.h \
+    UserSearchDialog.h \
+    UserWidget.h \
     VideoMemberWidget.h \
     VideoWSClient.h \
     WSClient.h \
@@ -40,6 +44,8 @@ HEADERS += \
 
 FORMS += \
     NewGroupDialog.ui \
+    UserSearchDialog.ui \
+    UserWidget.ui \
     VideoMemberWidget.ui \
     calldialog.ui \
     callwindow.ui \

@@ -31,13 +31,14 @@ public:
     void handleLogInFail(QJsonObject eventData);
     void handleRegisterFail(QJsonObject eventData);
     void handleRegisterSuccess(QJsonObject eventData);
-
-void prependNewMessages(QJsonArray recentMessages, QString groupId);
+    void handleNewGroup(QJsonObject eventData);
 
 Q_SIGNALS:
     void fetchMessages(QString groupId, qint64 timestamp);
 public Q_SLOTS:
     void handleUpdateUI(UI_UpdateType type, QJsonObject eventData);
+    void sendEvent(QJsonDocument eventData);
+    void triggerPassToGroupDialog(QJsonObject eventData);
 
 private slots:
     void on_loginButton_clicked();
@@ -64,10 +65,15 @@ private slots:
 
     void on_createGroupButton_clicked();
 
+Q_SIGNALS:
+    void passToGroupDialog(QJsonObject eventData);
+
 private:
     Ui::MainWindow *ui;
     WSClient *client;
     QMovie *loadingGif = new QMovie(":/gifs/loading.gif");
     QPixmap *logo = new QPixmap(":/images/logo-black.png");
+
+    void prependNewMessages(QJsonArray recentMessages, QString groupId);
 };
 #endif // MAINWINDOW_H

@@ -313,6 +313,18 @@ void MainWindow::handleGroupChatNewMessage(QJsonObject eventData)
         ui->messagesListWidget->setItemWidget(item, widget);
         ui->messagesListWidget->scrollToBottom();
     }
+
+    // for (int i = 0; i < ui->groupListWidget->count(); ++i) {
+    //     QListWidgetItem *item = ui->groupListWidget->item(i);
+    //     GroupWidget *widget = qobject_cast<GroupWidget*>(ui->groupListWidget->itemWidget(item));
+
+    //     if (widget->getId() == groupId) {
+    //         QListWidgetItem *item = ui->groupListWidget->takeItem(i);
+    //         ui->groupListWidget->insertItem(0, item);
+
+    //         break;
+    //     }
+    // }
 }
 
 QJsonDocument createJoinCallEvent(QJsonObject eventData) {
@@ -404,6 +416,26 @@ void MainWindow::handleRegisterSuccess(QJsonObject eventData)
     ui->loading_gif_register->setText(eventData["message"].toString());
 }
 
+void MainWindow::handleNewGroup(QJsonObject eventData)
+{
+    QListWidgetItem *item = new QListWidgetItem();
+
+    GroupWidget *widget = new GroupWidget(
+        this,
+        eventData["id"].toString(),
+        eventData["title"].toString(),
+        "No messages yet.",
+        0
+        );
+
+    item->setSizeHint(widget->sizeHint());
+
+    ui->groupListWidget->addItem(item);
+    ui->groupListWidget->setItemWidget(item, widget);
+
+    groupLastMessagesFetchedCount[eventData["id"].toString()] = 0;
+}
+
 void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
 {
     qDebug() << "Updating UI";
@@ -443,7 +475,21 @@ void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
             qDebug() << "Type: REGISTRATION_SUCCEEDED";
             handleRegisterSuccess(eventData);
             break;
+        case UI_UpdateType::NEW_GROUP:
+            qDebug() << "Type: NEW_GROUP";
+            handleNewGroup(eventData);
+            break;
         }
+}
+
+void MainWindow::sendEvent(QJsonDocument eventData)
+{
+    this->client->sendEvent(QString::fromUtf8(eventData.toJson(QJsonDocument::Indented)));
+}
+
+void MainWindow::triggerPassToGroupDialog(QJsonObject eventData)
+{
+    emit passToGroupDialog(eventData);
 }
 
 void MainWindow::on_loginButton_clicked()
@@ -653,10 +699,13 @@ void MainWindow::on_callButton_clicked()
 void MainWindow::on_createGroupButton_clicked()
 {
     NewGroupDialog *newGroupDialog = new NewGroupDialog(this);
+    QDialog::connect(this, &MainWindow::passToGroupDialog, newGroupDialog, &NewGroupDialog::triggerPassToSearchDialog);
     newGroupDialog->exec();
 
     if (newGroupDialog->result() == QDialog::Accepted) {
         qDebug() << "Creating group!";
+
+        this->client->sendEvent(QString::fromUtf8(newGroupDialog->getEvent().toJson(QJsonDocument::Indented)));
     }
 }
 

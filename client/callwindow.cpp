@@ -227,14 +227,14 @@ void CallWindow::initAudioOutput()
     //     session->setAudioOutput(audioOutput);
     // }
 
-    QAudioFormat formatOutput = audioOutputDevices[0].preferredFormat();
+    QAudioFormat formatOutput = QMediaDevices::defaultAudioOutput().preferredFormat();
 
     if(!formatOutput.isValid()) {
         qDebug() << "Invalid output audio format!";
         return;
     }
 
-    audioSink = new QAudioSink(audioOutputDevices[0], formatOutput);
+    audioSink = new QAudioSink(QMediaDevices::defaultAudioOutput(), formatOutput);
 
     if (!audioSink) {
         qDebug() << "Could not create audio sink!";
@@ -299,7 +299,7 @@ void CallWindow::onUpdateFrame(QString userId, QByteArray frameData)
 
 void CallWindow::onUpdateAudio(QString userId, QByteArray audioData)
 {
-    if (audioOutputDevice)
+    if (audioOutputDevice && userId != UserData::getInstance()->getId())
         audioOutputDevice->write(audioData);
 }
 

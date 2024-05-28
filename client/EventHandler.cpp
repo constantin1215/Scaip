@@ -14,7 +14,9 @@ enum class EventsReceived {
     FETCH_MESSAGES,
     NEW_MESSAGE_SUCCESS,
     NEW_CALL_SUCCESS,
-    JOIN_CALL
+    JOIN_CALL,
+    FETCH_USERS_BY_QUERY,
+    CREATE_GROUP_SUCCESS
 };
 
 static const  QMap<QString, EventsReceived> events {
@@ -26,7 +28,9 @@ static const  QMap<QString, EventsReceived> events {
     {"FETCH_MESSAGES", EventsReceived::FETCH_MESSAGES},
     {"NEW_MESSAGE_SUCCESS", EventsReceived::NEW_MESSAGE_SUCCESS},
     {"NEW_CALL_SUCCESS", EventsReceived::NEW_CALL_SUCCESS},
-    {"JOIN_CALL", EventsReceived::JOIN_CALL}
+    {"JOIN_CALL", EventsReceived::JOIN_CALL},
+    {"FETCH_USERS_BY_QUERY", EventsReceived::FETCH_USERS_BY_QUERY},
+    {"CREATE_GROUP_SUCCESS", EventsReceived::CREATE_GROUP_SUCCESS}
 };
 
 EventHandler::EventHandler(MainWindow &ui, bool debug, QObject *parent) :
@@ -58,6 +62,8 @@ void EventHandler::handleEvent(QString jsonString)
         qDebug() << "Event not specified\n";
         return;
     }
+
+    qDebug() << jsonObjEvent;
 
     QString eventString = jsonObjEvent["EVENT"].toString();
 
@@ -92,6 +98,12 @@ void EventHandler::handleEvent(QString jsonString)
             break;
         case EventsReceived::JOIN_CALL:
             handleJoinCall(jsonObjEvent);
+            break;
+        case EventsReceived::FETCH_USERS_BY_QUERY:
+            handleFetchedUsers(jsonObjEvent);
+            break;
+        case EventsReceived::CREATE_GROUP_SUCCESS:
+            handleNewGroup(jsonObjEvent);
             break;
         }
 }
@@ -158,6 +170,20 @@ void EventHandler::handleJoinCall(QJsonObject eventData)
     qDebug() << "Handling JOIN_CALL\n";
 
     emit updateUI(UI_UpdateType::JOIN_CALL, eventData);
+}
+
+void EventHandler::handleFetchedUsers(QJsonObject eventData)
+{
+    qDebug() << "Handling FETCH_USERS_BY_QUERY\n";
+
+    emit updateSearchResult(eventData);
+}
+
+void EventHandler::handleNewGroup(QJsonObject eventData)
+{
+    qDebug() << "Handling CREATE_GROUP_SUCCESS\n";
+
+    emit updateUI(UI_UpdateType::NEW_GROUP, eventData);
 }
 
 void EventHandler::handleFetchedProfile(QJsonObject eventData)
