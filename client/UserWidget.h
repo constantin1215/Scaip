@@ -10,7 +10,8 @@ class UserWidget;
 enum class UserWidgetType {
     CHECKBOX,
     X_BTN,
-    SIMPLE
+    SIMPLE,
+    KICK
 };
 
 class UserWidget : public QWidget
@@ -33,6 +34,8 @@ private slots:
     void on_checkBox_stateChanged(int arg1);
 
     void on_xButton_clicked();
+
+    void on_kickButton_clicked();
 
 Q_SIGNALS:
     void addToList(QString id);

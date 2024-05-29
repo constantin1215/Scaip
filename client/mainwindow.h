@@ -39,6 +39,7 @@ public Q_SLOTS:
     void handleUpdateUI(UI_UpdateType type, QJsonObject eventData);
     void sendEvent(QJsonDocument eventData);
     void triggerPassToGroupDialog(QJsonObject eventData);
+    void triggerPassToMembersDialog(QJsonObject eventData);
 
 private slots:
     void on_loginButton_clicked();
@@ -65,9 +66,13 @@ private slots:
 
     void on_createGroupButton_clicked();
 
+    void on_membersButton_clicked();
+
+    void on_addMembersButton_clicked();
+
 Q_SIGNALS:
     void passToGroupDialog(QJsonObject eventData);
-
+    void passToMembersDialog(QJsonObject eventData);
 private:
     Ui::MainWindow *ui;
     WSClient *client;

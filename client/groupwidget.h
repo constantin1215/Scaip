@@ -13,13 +13,19 @@ class GroupWidget : public QWidget
     Q_OBJECT
 
 public:
-    explicit GroupWidget(QWidget *parent = nullptr, QString id = "", QString groupName = "", QString lastMessage = "", qint64 timestamp = 0);
+    explicit GroupWidget(QWidget *parent = nullptr,
+                         QString id = "",
+                         QString groupName = "",
+                         QString lastMessage = "",
+                         qint64 timestamp = 0,
+                         QString ownerId = "");
     ~GroupWidget();
 
     QString getId();
     qint64 getTimestmap();
     bool getOpenedStatus();
     QString getGroupName();
+    QString getOwnerId();
 
     void setOpenedStatus(bool status);
     void setLastMessage(QString lastMessage);
@@ -27,6 +33,7 @@ public:
 private:
     Ui::GroupWidget *ui;
     QString id;
+    QString ownerId;
     QString groupName;
     qint64 timestamp;
     bool wasOpened;

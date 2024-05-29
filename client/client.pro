@@ -11,6 +11,7 @@ CONFIG += c++17
 SOURCES += \
     AudioWSClient.cpp \
     EventHandler.cpp \
+    MembersListDialog.cpp \
     NewGroupDialog.cpp \
     UserData.cpp \
     UserSearchDialog.cpp \
@@ -28,6 +29,7 @@ SOURCES += \
 HEADERS += \
     AudioWSClient.h \
     EventHandler.h \
+    MembersListDialog.h \
     NewGroupDialog.h \
     UI_UpdateTypes.h \
     UserData.h \
@@ -43,6 +45,7 @@ HEADERS += \
     messagewidget.h
 
 FORMS += \
+    MembersListDialog.ui \
     NewGroupDialog.ui \
     UserSearchDialog.ui \
     UserWidget.ui \

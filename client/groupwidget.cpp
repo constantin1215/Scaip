@@ -5,7 +5,7 @@
 
 
 
-GroupWidget::GroupWidget(QWidget *parent, QString id, QString groupName, QString lastMessage, qint64 timestamp)
+GroupWidget::GroupWidget(QWidget *parent, QString id, QString groupName, QString lastMessage, qint64 timestamp, QString ownerId)
     : QWidget(parent)
     , ui(new Ui::GroupWidget)
 {
@@ -15,6 +15,7 @@ GroupWidget::GroupWidget(QWidget *parent, QString id, QString groupName, QString
     this->groupName = groupName;
     this->timestamp = timestamp;
     this->wasOpened = false;
+    this->ownerId = ownerId;
 
     ui->groupTitleLabel->setText(groupName);
     ui->lastMessageLabel->setText(lastMessage);
@@ -44,6 +45,11 @@ bool GroupWidget::getOpenedStatus()
 QString GroupWidget::getGroupName()
 {
     return this->groupName;
+}
+
+QString GroupWidget::getOwnerId()
+{
+    return this->ownerId;
 }
 
 void GroupWidget::setOpenedStatus(bool status)

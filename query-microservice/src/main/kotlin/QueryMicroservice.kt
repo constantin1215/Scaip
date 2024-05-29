@@ -36,7 +36,8 @@ class QueryMicroservice {
         ADD_MEMBERS_SUCCESS,
         REMOVE_MEMBERS_SUCCESS,
         NEW_MESSAGE_SUCCESS,
-        NEW_CALL_SUCCESS
+        NEW_CALL_SUCCESS,
+        FETCH_GROUP_MEMBERS
     }
 
     private val gson = Gson()
@@ -108,6 +109,10 @@ class QueryMicroservice {
                     logger.info("Adding new call to group.")
                     handleNewCall(data, headers)
                 }
+                Event.FETCH_GROUP_MEMBERS -> {
+                    logger.info("Fetching group members.")
+                    handleMembersFetching(data, headers);
+                }
                 else -> { println("TO DO() handle ${headers["EVENT"] as String}") }
             }
         } catch (ex : EntityAlreadyInCollection) {
@@ -123,8 +128,24 @@ class QueryMicroservice {
         }
     }
 
-    private fun handleNewCall(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+    private fun handleMembersFetching(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
         logger.info(data)
+
+        val result = groupRepository.fetchMembers(data["groupId"] as String)
+
+        val newMsg = Message
+            .of(result)
+            .addMetadata(
+                OutgoingKafkaRecordMetadata.builder<String>()
+                    .withHeaders(createHeaders(headers)).build()
+            )
+
+        gatewayEmitter.send(newMsg)
+
+        logger.info("Group members fetched successfully.")
+    }
+
+    private fun handleNewCall(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
         val group = groupRepository.findById((data["groupId"] as String?) ?: "-1")
             ?: throw GroupNotFound(data["groupId"] as String? ?: "-1", headers["EVENT"] as String)
 

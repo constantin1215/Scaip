@@ -2,6 +2,7 @@
 #include "NewGroupDialog.h"
 #include "ui_mainwindow.h"
 
+#include <MembersListDialog.h>
 #include <QJsonArray>
 #include <QThread>
 #include <QTimer>
@@ -75,6 +76,7 @@ MainWindow::MainWindow(QWidget *parent, WSClient *client)
     ui->setupUi(this);
 
     ui->hiddenGroupId->setVisible(false);
+    ui->hiddenRole->setVisible(false);
 
     ui->stackedWidget->setCurrentIndex(static_cast<int>(Pages::MAIN_PAGE));
     ui->stackedWidget_dashboard->setCurrentIndex(static_cast<int>(Tabs::PROFILE_TAB));
@@ -149,12 +151,15 @@ void MainWindow::handleProfileFetchUpdate()
             secondsLong = static_cast<qint64>(seconds);
         }
 
+        QString ownerId = currentGroup["owner"].toObject()["id"].toString();
+
         GroupWidget *widget = new GroupWidget(
             this,
             currentGroup["id"].toString(),
             currentGroup["title"].toString(),
             isLastMessageNull ? "No messages yet." : lastMessage,
-            isLastMessageNull ? 0 : secondsLong
+            isLastMessageNull ? 0 : secondsLong,
+            ownerId
             );
 
         item->setSizeHint(widget->sizeHint());
@@ -313,18 +318,6 @@ void MainWindow::handleGroupChatNewMessage(QJsonObject eventData)
         ui->messagesListWidget->setItemWidget(item, widget);
         ui->messagesListWidget->scrollToBottom();
     }
-
-    // for (int i = 0; i < ui->groupListWidget->count(); ++i) {
-    //     QListWidgetItem *item = ui->groupListWidget->item(i);
-    //     GroupWidget *widget = qobject_cast<GroupWidget*>(ui->groupListWidget->itemWidget(item));
-
-    //     if (widget->getId() == groupId) {
-    //         QListWidgetItem *item = ui->groupListWidget->takeItem(i);
-    //         ui->groupListWidget->insertItem(0, item);
-
-    //         break;
-    //     }
-    // }
 }
 
 QJsonDocument createJoinCallEvent(QJsonObject eventData) {
@@ -425,12 +418,13 @@ void MainWindow::handleNewGroup(QJsonObject eventData)
         eventData["id"].toString(),
         eventData["title"].toString(),
         "No messages yet.",
-        0
+        0,
+        eventData["owner"].toObject()["id"].toString()
         );
 
     item->setSizeHint(widget->sizeHint());
 
-    ui->groupListWidget->addItem(item);
+    ui->groupListWidget->insertItem(0, item);
     ui->groupListWidget->setItemWidget(item, widget);
 
     groupLastMessagesFetchedCount[eventData["id"].toString()] = 0;
@@ -490,6 +484,11 @@ void MainWindow::sendEvent(QJsonDocument eventData)
 void MainWindow::triggerPassToGroupDialog(QJsonObject eventData)
 {
     emit passToGroupDialog(eventData);
+}
+
+void MainWindow::triggerPassToMembersDialog(QJsonObject eventData)
+{
+    emit passToMembersDialog(eventData);
 }
 
 void MainWindow::on_loginButton_clicked()
@@ -609,7 +608,7 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
     if (item) {
         QWidget *widget = item->listWidget()->itemWidget(item);
 
-        if(widget) {
+        if (widget) {
             GroupWidget *groupWidget = qobject_cast<GroupWidget*>(widget);
 
             if (groupWidget) {
@@ -634,7 +633,7 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
                     });
                 }
 
-                for(int i = 0;i < messages.count(); i++) {
+                for (int i = 0;i < messages.count(); i++) {
                     QListWidgetItem *item = new QListWidgetItem(ui->messagesListWidget);
 
                     MessageWidget *widget = new MessageWidget(
@@ -651,9 +650,18 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
 
                 ui->messagesListWidget->scrollToBottom();
 
-                if(!groupWidget->getOpenedStatus()) {
+                if (!groupWidget->getOpenedStatus()) {
                     groupWidget->setOpenedStatus(true);
                     emit fetchMessages(groupWidget->getId(), groupWidget->getTimestmap());
+                }
+
+                if (UserData::getInstance()->getId() != groupWidget->getOwnerId()) {
+                    ui->addMembersButton->hide();
+                    ui->hiddenRole->setText("REGULAR");
+                }
+                else {
+                    ui->addMembersButton->show();
+                    ui->hiddenRole->setText("OWNER");
                 }
             }
         }
@@ -707,5 +715,19 @@ void MainWindow::on_createGroupButton_clicked()
 
         this->client->sendEvent(QString::fromUtf8(newGroupDialog->getEvent().toJson(QJsonDocument::Indented)));
     }
+}
+
+
+void MainWindow::on_membersButton_clicked()
+{
+    MembersListDialog *membersListDialog = new MembersListDialog(this, ui->selectedGroupName_label->text(), ui->hiddenGroupId->text(), ui->hiddenRole->text());
+    QDialog::connect(this, &MainWindow::passToMembersDialog, membersListDialog, &MembersListDialog::updateMembersList);
+    membersListDialog->exec();
+}
+
+
+void MainWindow::on_addMembersButton_clicked()
+{
+
 }
 

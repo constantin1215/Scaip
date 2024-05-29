@@ -48,6 +48,7 @@ class GatewayWebsocket {
         UNAUTHORIZED,
         FETCH_USERS_BY_QUERY,
         FETCH_PROFILE,
+        FETCH_GROUP_MEMBERS,
         CREATE_GROUP_SUCCESS,
         CREATE_GROUP_FAIL,
         ADD_MEMBERS_SUCCESS,
@@ -278,11 +279,14 @@ class GatewayWebsocket {
 
                 Event.FETCH_MESSAGES -> {
                     logger.info("An user fetched a conversation.")
-                    logger.info(data)
                 }
 
                 Event.JOIN_CALL -> {
                     logger.info("An user tries to join a call.")
+                }
+
+                Event.FETCH_GROUP_MEMBERS -> {
+                    logger.info("An user fetched the members of a group.")
                 }
 
                 else -> {

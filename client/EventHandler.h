@@ -14,6 +14,7 @@ Q_SIGNALS:
     void fetchProfile(QString JWT);
     void updateUI(UI_UpdateType type, QJsonObject eventData);
     void updateSearchResult(QJsonObject eventData);
+    void updateMembersList(QJsonObject eventData);
 public slots:
     void handleEvent(QString jsonString);
 private:
@@ -32,6 +33,7 @@ private:
     void handleJoinCall(QJsonObject eventData);
     void handleFetchedUsers(QJsonObject eventData);
     void handleNewGroup(QJsonObject eventData);
+    void handleFetchedMembers(QJsonObject eventData);
 };
 
 #endif // EVENTHANDLER_H

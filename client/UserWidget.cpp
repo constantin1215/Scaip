@@ -24,13 +24,20 @@ UserWidget::UserWidget(QWidget *parent, QString id, QString username, QString fi
 
     case UserWidgetType::CHECKBOX:
         ui->xButton->hide();
+        ui->kickButton->hide();
         break;
     case UserWidgetType::X_BTN:
         ui->checkBox->hide();
+        ui->kickButton->hide();
+        break;
+    case UserWidgetType::KICK:
+        ui->checkBox->hide();
+        ui->xButton->hide();
         break;
     case UserWidgetType::SIMPLE:
         ui->checkBox->hide();
         ui->xButton->hide();
+        ui->kickButton->hide();
         break;
     }
 
@@ -66,5 +73,11 @@ void UserWidget::on_checkBox_stateChanged(int arg1)
 void UserWidget::on_xButton_clicked()
 {
     emit removeFromList(this->id);
+}
+
+
+void UserWidget::on_kickButton_clicked()
+{
+
 }
 
