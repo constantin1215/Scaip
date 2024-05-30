@@ -41,8 +41,8 @@ UserWidget::UserWidget(QWidget *parent, QString id, QString username, QString fi
         break;
     }
 
-    QObject::connect(this, &UserWidget::addToList, qobject_cast<UserSearchDialog *>(parent), &UserSearchDialog::addToList);
-    QObject::connect(this, &UserWidget::removeFromList, qobject_cast<UserSearchDialog *>(parent), &UserSearchDialog::removeFromList);
+    //QObject::connect(this, &UserWidget::addToList, qobject_cast<UserSearchDialog *>(parent), &UserSearchDialog::addToList);
+    //QObject::connect(this, &UserWidget::removeFromList, qobject_cast<UserSearchDialog *>(parent), &UserSearchDialog::removeFromList);
 }
 
 UserWidget::~UserWidget()
@@ -78,6 +78,6 @@ void UserWidget::on_xButton_clicked()
 
 void UserWidget::on_kickButton_clicked()
 {
-
+    emit kick(this->id);
 }
 

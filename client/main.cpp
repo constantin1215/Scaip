@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     EventHandler::connect(&client, &WSClient::passToHandler, &eventHandler, &EventHandler::handleEvent);
     EventHandler::connect(&eventHandler, &EventHandler::fetchProfile, &client, &WSClient::onFetchProfile);
     EventHandler::connect(&eventHandler, &EventHandler::updateUI, &w, &MainWindow::handleUpdateUI);
-    EventHandler::connect(&eventHandler, &EventHandler::updateSearchResult, &w, &MainWindow::triggerPassToGroupDialog);
+    EventHandler::connect(&eventHandler, &EventHandler::updateSearchResult, &w, &MainWindow::triggerPassSearchResultDialog);
     EventHandler::connect(&eventHandler, &EventHandler::updateMembersList, &w, &MainWindow::triggerPassToMembersDialog);
     EventHandler::connect(&w, &MainWindow::fetchMessages, &client, &WSClient::onFetchMessages);
     w.show();

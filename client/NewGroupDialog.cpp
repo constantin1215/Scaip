@@ -16,6 +16,7 @@ NewGroupDialog::NewGroupDialog(QWidget *parent)
 
 NewGroupDialog::~NewGroupDialog()
 {
+    QObject::disconnect(this);
     delete ui;
 }
 
@@ -51,6 +52,7 @@ void NewGroupDialog::on_addMemberButton_clicked()
 
     UserSearchDialog *userSearchDialog = new UserSearchDialog(this);
     QObject::connect(this, &NewGroupDialog::passToSearchDialog, userSearchDialog, &UserSearchDialog::updateResultsList);
+    QObject::connect(userSearchDialog, &UserSearchDialog::sendEvent, qobject_cast<MainWindow*>(this->parent()), &MainWindow::sendEvent);
     userSearchDialog->exec();
 
     if (userSearchDialog->result() == QDialog::Accepted) {

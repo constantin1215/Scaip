@@ -237,11 +237,21 @@ class GatewayWebsocket {
                     logger.info("Users successfully added to group by user with session $session")
                     val members = (data["members"] as ArrayList<Map<String, String>>).map { it["id"]!! }.toSet()
                     storageService.addToSet("GROUP:${data["groupId"] as String}", members)
+                    if (storageService.groupExists(data["groupId"] as String)) {
+                        logger.info("Notifying users of new users in ${data["groupId"]}")
+                        multicastToGroup(data)
+                        return@executeBlocking
+                    }
                 }
 
                 Event.REMOVE_MEMBERS_SUCCESS -> {
                     logger.info("Users successfully removed from group by user with session $session")
                     val members = (data["members"] as ArrayList<Map<String, String>>).map { it["id"]!! }.toSet()
+                    if (storageService.groupExists(data["groupId"] as String)) {
+                        logger.info("Notifying users of kicked user in ${data["groupId"]}")
+                        multicastToGroup(data)
+                        return@executeBlocking
+                    }
                     storageService.removeFromSet("GROUP:${data["groupId"] as String}", members)
                 }
 
@@ -264,15 +274,7 @@ class GatewayWebsocket {
                     logger.info("A new message/call has been received.")
                     if (storageService.groupExists(data["groupId"] as String)) {
                         logger.info("New message in ${data["groupId"]}")
-                        val members = storageService.getSet("GROUP:${data["groupId"]}")
-                        for (member in members) {
-                            val memberSession = storageService.getString("USER:$member")
-                            logger.info("Member session: $memberSession")
-                            if (memberSession != null) {
-                                logger.info("Sending message to $memberSession")
-                                sessions[memberSession]!!.asyncRemote.sendText(gson.toJson(data))
-                            }
-                        }
+                        multicastToGroup(data)
                         return@executeBlocking
                     }
                 }
@@ -297,6 +299,18 @@ class GatewayWebsocket {
             }
             if (sessions[session] != null)
                 sessions[session]!!.asyncRemote.sendText(gson.toJson(data))
+        }
+    }
+
+    private fun multicastToGroup(data: MutableMap<String, Any>) {
+        val members = storageService.getSet("GROUP:${data["groupId"]}")
+        for (member in members) {
+            val memberSession = storageService.getString("USER:$member")
+            logger.info("Member session: $memberSession")
+            if (memberSession != null) {
+                logger.info("Sending message to $memberSession")
+                sessions[memberSession]!!.asyncRemote.sendText(gson.toJson(data))
+            }
         }
     }
 }

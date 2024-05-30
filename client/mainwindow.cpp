@@ -7,6 +7,7 @@
 #include <QThread>
 #include <QTimer>
 #include <UserData.h>
+#include <UserSearchDialog.h>
 #include <calldialog.h>
 #include <callwindow.h>
 #include <groupwidget.h>
@@ -430,6 +431,37 @@ void MainWindow::handleNewGroup(QJsonObject eventData)
     groupLastMessagesFetchedCount[eventData["id"].toString()] = 0;
 }
 
+void MainWindow::handleNewMembers(QJsonObject eventData)
+{
+
+}
+
+void MainWindow::handleMemberRemoval(QJsonObject eventData)
+{
+    QJsonArray members = eventData["members"].toArray();
+
+    if (members.empty())
+        return;
+
+    QString groupId = eventData["groupId"].toString();
+
+    for (int i = 0; i < members.count(); ++i) {
+        QString id = members[i].toObject()["id"].toString();
+
+        if (id == UserData::getInstance()->getId()) {
+            for (int j = 0; j < ui->groupListWidget->count(); ++j) {
+                QListWidgetItem *item = ui->groupListWidget->item(j);
+                GroupWidget *widget = qobject_cast<GroupWidget*>(ui->groupListWidget->itemWidget(item));
+
+                if (widget->getId() == groupId) {
+                    ui->groupListWidget->takeItem(j);
+                    groupConversations.remove(groupId);
+                }
+            }
+        }
+    }
+}
+
 void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
 {
     qDebug() << "Updating UI";
@@ -473,6 +505,14 @@ void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
             qDebug() << "Type: NEW_GROUP";
             handleNewGroup(eventData);
             break;
+        case UI_UpdateType::ADD_NEW_MEMBERS:
+            qDebug() << "Type: ADD_NEW_MEMBERS";
+            handleNewMembers(eventData);
+            break;
+        case UI_UpdateType::REMOVE_GROUP_MEMBERS:
+            qDebug() << "Type: REMOVE_GROUP_MEMBERS";
+            handleMemberRemoval(eventData);
+            break;
         }
 }
 
@@ -481,9 +521,9 @@ void MainWindow::sendEvent(QJsonDocument eventData)
     this->client->sendEvent(QString::fromUtf8(eventData.toJson(QJsonDocument::Indented)));
 }
 
-void MainWindow::triggerPassToGroupDialog(QJsonObject eventData)
+void MainWindow::triggerPassSearchResultDialog(QJsonObject eventData)
 {
-    emit passToGroupDialog(eventData);
+    emit passToSearchDialog(eventData);
 }
 
 void MainWindow::triggerPassToMembersDialog(QJsonObject eventData)
@@ -707,7 +747,7 @@ void MainWindow::on_callButton_clicked()
 void MainWindow::on_createGroupButton_clicked()
 {
     NewGroupDialog *newGroupDialog = new NewGroupDialog(this);
-    QDialog::connect(this, &MainWindow::passToGroupDialog, newGroupDialog, &NewGroupDialog::triggerPassToSearchDialog);
+    QDialog::connect(this, &MainWindow::passToSearchDialog, newGroupDialog, &NewGroupDialog::triggerPassToSearchDialog);
     newGroupDialog->exec();
 
     if (newGroupDialog->result() == QDialog::Accepted) {
@@ -721,13 +761,22 @@ void MainWindow::on_createGroupButton_clicked()
 void MainWindow::on_membersButton_clicked()
 {
     MembersListDialog *membersListDialog = new MembersListDialog(this, ui->selectedGroupName_label->text(), ui->hiddenGroupId->text(), ui->hiddenRole->text());
+    QObject::connect(membersListDialog, &MembersListDialog::sendEvent, this, &MainWindow::sendEvent);
     QDialog::connect(this, &MainWindow::passToMembersDialog, membersListDialog, &MembersListDialog::updateMembersList);
+    membersListDialog->fetchMembers();
     membersListDialog->exec();
 }
 
 
 void MainWindow::on_addMembersButton_clicked()
 {
+    UserSearchDialog *userSearchDialog = new UserSearchDialog(this);
+    QDialog::connect(this, &MainWindow::passToSearchDialog, userSearchDialog, &UserSearchDialog::updateResultsList);
+    QObject::connect(userSearchDialog, &UserSearchDialog::sendEvent, qobject_cast<MainWindow*>(this), &MainWindow::sendEvent);
+    userSearchDialog->exec();
 
+    if (userSearchDialog->result() == QDialog::Accepted) {
+
+    }
 }
 

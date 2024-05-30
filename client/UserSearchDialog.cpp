@@ -1,5 +1,4 @@
 #include "UserSearchDialog.h"
-#include "mainwindow.h"
 #include "qjsondocument.h"
 #include "qjsonobject.h"
 #include "ui_UserSearchDialog.h"
@@ -12,12 +11,11 @@ UserSearchDialog::UserSearchDialog(QWidget *parent)
     , ui(new Ui::UserSearchDialog)
 {
     ui->setupUi(this);
-
-    QObject::connect(this, &UserSearchDialog::sendEvent, qobject_cast<MainWindow*>(parent->parent()), &MainWindow::sendEvent);
 }
 
 UserSearchDialog::~UserSearchDialog()
 {
+    QObject::disconnect(this);
     delete ui;
 }
 
@@ -49,6 +47,9 @@ void UserSearchDialog::updateResultsList(QJsonObject eventData)
 
         item->setSizeHint(widget->sizeHint());
         ui->listSearchResult->setItemWidget(item, widget);
+
+        QObject::connect(widget, &UserWidget::addToList, this, &UserSearchDialog::addToList);
+        QObject::connect(widget, &UserWidget::removeFromList, this, &UserSearchDialog::removeFromList);
     }
 }
 
@@ -71,6 +72,9 @@ void UserSearchDialog::addToList(QString id)
 
             item->setSizeHint(widget->sizeHint());
             ui->listChosenUsers->setItemWidget(item, widget);
+
+            QObject::connect(widget, &UserWidget::addToList, this, &UserSearchDialog::addToList);
+            QObject::connect(widget, &UserWidget::removeFromList, this, &UserSearchDialog::removeFromList);
 
             break;
         }

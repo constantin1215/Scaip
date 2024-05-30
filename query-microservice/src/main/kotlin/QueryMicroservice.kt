@@ -216,6 +216,8 @@ class QueryMicroservice {
             .map {
                 val user = userRepository.findById(it["id"]!!)
                     ?: throw UserProfileNotFound(it["id"]!!, headers["EVENT"] as String)
+                user.groups.removeIf { userGroup -> userGroup.id == group.id }
+                userRepository.update(user)
                 user.id
             }.toSet()
 
@@ -234,10 +236,17 @@ class QueryMicroservice {
             .map {
                 val user = userRepository.findById(it["id"]!!)
                     ?: throw UserProfileNotFound(it["id"]!!, headers["EVENT"] as String)
+                if (user.groups.find { userGroup -> userGroup.id == group.id } == null) {
+                    user.groups.add(GroupSummary(group))
+                    userRepository.update(user)
+                }
                 UserSummary(user)
             }.toSet()
 
-        group.members.addAll(members)
+        members.forEach {
+            if (group.members.find { member -> member.id == it.id } == null)
+                group.members.add(it)
+        }
 
         groupRepository.update(group)
 

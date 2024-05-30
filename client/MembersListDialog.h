@@ -16,14 +16,16 @@ class MembersListDialog : public QDialog
 public:
     explicit MembersListDialog(QWidget *parent = nullptr, QString groupName = "", QString groupId = "", QString type = "");
     ~MembersListDialog();
+    void fetchMembers();
 public Q_SLOTS:
     void updateMembersList(QJsonObject eventData);
-
+    void handleKick(QString id);
+Q_SIGNALS:
+    void sendEvent(QJsonDocument eventData);
 private:
     Ui::MembersListDialog *ui;
     QString type;
-Q_SIGNALS:
-    void sendEvent(QJsonDocument eventData);
+    QString groupId;
 };
 
 #endif // MEMBERSLISTDIALOG_H

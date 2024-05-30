@@ -40,6 +40,7 @@ private slots:
 Q_SIGNALS:
     void addToList(QString id);
     void removeFromList(QString id);
+    void kick(QString id);
 
 private:
     Ui::UserWidget *ui;

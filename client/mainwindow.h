@@ -32,13 +32,15 @@ public:
     void handleRegisterFail(QJsonObject eventData);
     void handleRegisterSuccess(QJsonObject eventData);
     void handleNewGroup(QJsonObject eventData);
+    void handleNewMembers(QJsonObject eventData);
+    void handleMemberRemoval(QJsonObject eventData);
 
 Q_SIGNALS:
     void fetchMessages(QString groupId, qint64 timestamp);
 public Q_SLOTS:
     void handleUpdateUI(UI_UpdateType type, QJsonObject eventData);
     void sendEvent(QJsonDocument eventData);
-    void triggerPassToGroupDialog(QJsonObject eventData);
+    void triggerPassSearchResultDialog(QJsonObject eventData);
     void triggerPassToMembersDialog(QJsonObject eventData);
 
 private slots:
@@ -71,7 +73,7 @@ private slots:
     void on_addMembersButton_clicked();
 
 Q_SIGNALS:
-    void passToGroupDialog(QJsonObject eventData);
+    void passToSearchDialog(QJsonObject eventData);
     void passToMembersDialog(QJsonObject eventData);
 private:
     Ui::MainWindow *ui;
