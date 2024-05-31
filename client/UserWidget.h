@@ -11,7 +11,8 @@ enum class UserWidgetType {
     CHECKBOX,
     X_BTN,
     SIMPLE,
-    KICK
+    KICK,
+    OWNER
 };
 
 class UserWidget : public QWidget

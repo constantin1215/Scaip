@@ -37,6 +37,7 @@ public:
 
 Q_SIGNALS:
     void fetchMessages(QString groupId, qint64 timestamp);
+    void updateMembersList(QJsonObject eventData);
 public Q_SLOTS:
     void handleUpdateUI(UI_UpdateType type, QJsonObject eventData);
     void sendEvent(QJsonDocument eventData);
@@ -80,6 +81,10 @@ private:
     WSClient *client;
     QMovie *loadingGif = new QMovie(":/gifs/loading.gif");
     QPixmap *logo = new QPixmap(":/images/logo-black.png");
+
+    QString selectedGroupId;
+    QString selectedGroupOwnerId;
+    QString roleInSelectedGroup;
 
     void prependNewMessages(QJsonArray recentMessages, QString groupId);
 };

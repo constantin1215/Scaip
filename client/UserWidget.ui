@@ -89,6 +89,13 @@
      </property>
     </widget>
    </item>
+   <item>
+    <widget class="QLabel" name="labelOwner">
+     <property name="text">
+      <string>OWNER</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>

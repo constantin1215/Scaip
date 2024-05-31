@@ -7,7 +7,7 @@
 #include <UserWidget.h>
 #include <mainwindow.h>
 
-MembersListDialog::MembersListDialog(QWidget *parent, QString groupName, QString groupId, QString type)
+MembersListDialog::MembersListDialog(QWidget *parent, QString groupName, QString groupId, QString type, QString ownerId)
     : QDialog(parent)
     , ui(new Ui::MembersListDialog)
 {
@@ -15,6 +15,7 @@ MembersListDialog::MembersListDialog(QWidget *parent, QString groupName, QString
 
     this->type = type;
     this->groupId = groupId;
+    this->ownerId = ownerId;
 
     qDebug() << this->type;
 
@@ -53,7 +54,8 @@ void MembersListDialog::updateMembersList(QJsonObject eventData)
                                             member["username"].toString(),
                                             member["firstName"].toString(),
                                             member["lastName"].toString(),
-                                            this->type == "OWNER" ? UserWidgetType::KICK : UserWidgetType::SIMPLE
+                                            //this->type == "OWNER" ? UserWidgetType::KICK : (member["_id"].toString() == this->ownerId ? UserWidgetType::OWNER : UserWidgetType::SIMPLE)
+                                            member["_id"].toString() == this->ownerId ? UserWidgetType::OWNER : (this->type == "OWNER" ? UserWidgetType::KICK : UserWidgetType::SIMPLE)
                                             );
 
         QListWidgetItem *item = new QListWidgetItem(ui->listMembers);
@@ -84,4 +86,27 @@ void MembersListDialog::handleKick(QString id)
     QJsonDocument json(event);
 
     emit sendEvent(json);
+}
+
+void MembersListDialog::handleKickResult(QJsonObject eventData)
+{
+    qDebug() << eventData;
+    QString eventGroupId = eventData["groupId"].toString();
+    QJsonArray membersKicked = eventData["members"].toArray();
+
+    if (eventGroupId == this->groupId) {
+        for (int i = 0; i < membersKicked.count(); ++i) {
+            QJsonObject member = membersKicked[i].toObject();
+
+            for (int j = 0; j < ui->listMembers->count(); ++j) {
+                QListWidgetItem *item = ui->listMembers->item(j);
+                UserWidget *widget = qobject_cast<UserWidget*>(ui->listMembers->itemWidget(item));
+
+                if (widget->getId() == member["id"].toString()) {
+                    ui->listMembers->takeItem(j);
+                    break;
+                }
+            }
+        }
+    }
 }

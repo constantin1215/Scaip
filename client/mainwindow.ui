@@ -2025,20 +2025,6 @@
                          </widget>
                         </item>
                         <item>
-                         <widget class="QLabel" name="hiddenGroupId">
-                          <property name="text">
-                           <string/>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
-                         <widget class="QLabel" name="hiddenRole">
-                          <property name="text">
-                           <string/>
-                          </property>
-                         </widget>
-                        </item>
-                        <item>
                          <spacer name="horizontalSpacer_86">
                           <property name="orientation">
                            <enum>Qt::Horizontal</enum>

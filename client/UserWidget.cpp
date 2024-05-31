@@ -1,5 +1,4 @@
 #include "UserWidget.h"
-#include "UserSearchDialog.h"
 #include "ui_UserWidget.h"
 
 UserWidget::UserWidget(QWidget *parent, QString id, QString username, QString firstName, QString lastName, UserWidgetType type)
@@ -20,29 +19,28 @@ UserWidget::UserWidget(QWidget *parent, QString id, QString username, QString fi
     if (type == UserWidgetType::SIMPLE) {
     }
 
+    ui->checkBox->hide();
+    ui->xButton->hide();
+    ui->kickButton->hide();
+    ui->labelOwner->hide();
+
     switch(type) {
 
     case UserWidgetType::CHECKBOX:
-        ui->xButton->hide();
-        ui->kickButton->hide();
+        ui->checkBox->show();
         break;
     case UserWidgetType::X_BTN:
-        ui->checkBox->hide();
-        ui->kickButton->hide();
+        ui->xButton->show();
         break;
     case UserWidgetType::KICK:
-        ui->checkBox->hide();
-        ui->xButton->hide();
+        ui->kickButton->show();
         break;
     case UserWidgetType::SIMPLE:
-        ui->checkBox->hide();
-        ui->xButton->hide();
-        ui->kickButton->hide();
+        break;
+    case UserWidgetType::OWNER:
+        ui->labelOwner->show();
         break;
     }
-
-    //QObject::connect(this, &UserWidget::addToList, qobject_cast<UserSearchDialog *>(parent), &UserSearchDialog::addToList);
-    //QObject::connect(this, &UserWidget::removeFromList, qobject_cast<UserSearchDialog *>(parent), &UserSearchDialog::removeFromList);
 }
 
 UserWidget::~UserWidget()
