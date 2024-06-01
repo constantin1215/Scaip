@@ -252,10 +252,11 @@ CallWindow::~CallWindow()
     }
     if (audioSource)
         audioSource->stop();
-    if (player)
+    if (player) {
         player->stop();
-    if(player)
+        player->setVideoOutput(nullptr);
         delete player;
+    }
     if (session)
         delete session;
     delete ui;

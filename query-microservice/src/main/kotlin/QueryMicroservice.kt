@@ -37,7 +37,8 @@ class QueryMicroservice {
         REMOVE_MEMBERS_SUCCESS,
         NEW_MESSAGE_SUCCESS,
         NEW_CALL_SUCCESS,
-        FETCH_GROUP_MEMBERS
+        FETCH_GROUP_MEMBERS,
+        FETCH_GROUP
     }
 
     private val gson = Gson()
@@ -111,7 +112,11 @@ class QueryMicroservice {
                 }
                 Event.FETCH_GROUP_MEMBERS -> {
                     logger.info("Fetching group members.")
-                    handleMembersFetching(data, headers);
+                    handleMembersFetching(data, headers)
+                }
+                Event.FETCH_GROUP -> {
+                    logger.info("Fetch group info.")
+                    handleGroupFetching(data, headers)
                 }
                 else -> { println("TO DO() handle ${headers["EVENT"] as String}") }
             }
@@ -128,8 +133,27 @@ class QueryMicroservice {
         }
     }
 
+    private fun handleGroupFetching(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        if((data["groupId"] as String?) == null)
+            return
+
+        val result = groupRepository.fetchGroupDetails(data["groupId"] as String)
+
+        val newMsg = Message
+            .of(result)
+            .addMetadata(
+                OutgoingKafkaRecordMetadata.builder<String>()
+                    .withHeaders(createHeaders(headers)).build()
+            )
+
+        gatewayEmitter.send(newMsg)
+
+        logger.info("Group fetched successfully.")
+    }
+
     private fun handleMembersFetching(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
-        logger.info(data)
+        if((data["groupId"] as String?) == null)
+            return
 
         val result = groupRepository.fetchMembers(data["groupId"] as String)
 
@@ -199,9 +223,7 @@ class QueryMicroservice {
             timestamp
         )
 
-        group.lastMessage = message
-
-        groupRepository.update(group)
+        groupRepository.updateGroupLastMessage(data["groupId"] as String, message)
 
         userRepository.updateUserGroupsLastMessage(data["groupId"] as String, message)
 

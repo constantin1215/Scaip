@@ -26,6 +26,7 @@ public:
     bool getOpenedStatus();
     QString getGroupName();
     QString getOwnerId();
+    QString getLastMessage();
 
     void setOpenedStatus(bool status);
     void setLastMessage(QString lastMessage);
@@ -35,8 +36,11 @@ private:
     QString id;
     QString ownerId;
     QString groupName;
+    QString lastMessage;
     qint64 timestamp;
     bool wasOpened;
+
+    QString calculateTimeFormat(quint64 secondsSinceMsg);
 };
 
 #endif // GROUPWIDGET_H

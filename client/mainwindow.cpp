@@ -300,6 +300,27 @@ void MainWindow::handleGroupChatNewMessage(QJsonObject eventData)
         if (groupWidget->getId() == groupId) {
             groupWidget->setLastMessage(eventData["content"].toString());
             groupWidget->setTimestamp(timestamp);
+
+            GroupWidget *widget = new GroupWidget(
+                this,
+                groupWidget->getId(),
+                groupWidget->getGroupName(),
+                groupWidget->getLastMessage(),
+                groupWidget->getTimestmap(),
+                groupWidget->getOwnerId()
+                );
+
+            widget->setOpenedStatus(groupWidget->getOpenedStatus());
+
+            QListWidgetItem *item = new QListWidgetItem();
+
+            ui->groupListWidget->takeItem(i);
+
+            item->setSizeHint(widget->sizeHint());
+
+            ui->groupListWidget->insertItem(0, item);
+            ui->groupListWidget->setItemWidget(item, widget);
+
             break;
         }
     }
@@ -412,23 +433,34 @@ void MainWindow::handleRegisterSuccess(QJsonObject eventData)
 
 void MainWindow::handleNewGroup(QJsonObject eventData)
 {
-    QListWidgetItem *item = new QListWidgetItem();
+    QString lastMessage;
+    qint64 secondsLong;
+    bool isLastMessageNull = eventData["lastMessage"].isNull();
+    if(!isLastMessageNull) {
+        QJsonObject lastMessageObject = eventData["lastMessage"].toObject();
+        lastMessage = lastMessageObject["content"].toString();
+
+        secondsLong = lastMessageObject["timestamp"].toInteger();
+    }
 
     GroupWidget *widget = new GroupWidget(
         this,
-        eventData["id"].toString(),
+        eventData["id"].toString() == "" ? eventData["_id"].toString() : eventData["id"].toString(),
         eventData["title"].toString(),
-        "No messages yet.",
-        0,
+        isLastMessageNull ? "No messages yet." : lastMessage,
+        isLastMessageNull ? 0 : secondsLong,
         eventData["owner"].toObject()["id"].toString()
         );
+
+    QListWidgetItem *item = new QListWidgetItem();
 
     item->setSizeHint(widget->sizeHint());
 
     ui->groupListWidget->insertItem(0, item);
     ui->groupListWidget->setItemWidget(item, widget);
 
-    groupLastMessagesFetchedCount[eventData["id"].toString()] = 0;
+    groupConversations.remove(eventData["id"].toString());
+    groupLastMessagesFetchedCount.remove(eventData["id"].toString());
 }
 
 void MainWindow::handleNewMembers(QJsonObject eventData)
@@ -472,6 +504,9 @@ void MainWindow::handleMemberRemoval(QJsonObject eventData)
                     groupConversations.remove(groupId);
                 }
             }
+            if (selectedGroupId == groupId)
+                ui->stackedWidget_groups->setCurrentIndex(static_cast<int>(GroupStatus::NO_GROUP_SELECTED));
+            break;
         }
     }
 
@@ -666,6 +701,8 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
 
         if (widget) {
             GroupWidget *groupWidget = qobject_cast<GroupWidget*>(widget);
+
+            qDebug() << groupWidget->getId();
 
             if (groupWidget) {
                 ui->stackedWidget_groups->setCurrentIndex(static_cast<int>(GroupStatus::GROUP_SELECTED));

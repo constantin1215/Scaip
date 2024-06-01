@@ -50,7 +50,8 @@ class AuthMicroservice {
         NEW_CALL_SUCCESS,
         NEW_CALL_FAIL,
         JOIN_CALL,
-        FETCH_GROUP_MEMBERS
+        FETCH_GROUP_MEMBERS,
+        FETCH_GROUP
     }
 
     private val gson = Gson()

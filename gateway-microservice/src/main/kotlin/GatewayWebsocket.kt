@@ -49,6 +49,7 @@ class GatewayWebsocket {
         FETCH_USERS_BY_QUERY,
         FETCH_PROFILE,
         FETCH_GROUP_MEMBERS,
+        FETCH_GROUP,
         CREATE_GROUP_SUCCESS,
         CREATE_GROUP_FAIL,
         ADD_MEMBERS_SUCCESS,
@@ -227,6 +228,11 @@ class GatewayWebsocket {
                     storageService.addGroup(data["id"] as String)
                     val members = (data["members"] as ArrayList<Map<String, String>>).map { it["id"]!! }.toSet()
                     storageService.addToSet("GROUP:${data["id"] as String}", members)
+                    if (storageService.groupExists(data["id"] as String)) {
+                        logger.info("Notifying users of new group!")
+                        multicastToGroup(data, data["id"] as String)
+                        return@executeBlocking
+                    }
                 }
 
                 Event.UPDATE_GROUP_SUCCESS -> {
@@ -239,7 +245,7 @@ class GatewayWebsocket {
                     storageService.addToSet("GROUP:${data["groupId"] as String}", members)
                     if (storageService.groupExists(data["groupId"] as String)) {
                         logger.info("Notifying users of new users in ${data["groupId"]}")
-                        multicastToGroup(data)
+                        multicastToGroup(data, data["groupId"] as String)
                         return@executeBlocking
                     }
                 }
@@ -249,7 +255,7 @@ class GatewayWebsocket {
                     val members = (data["members"] as ArrayList<Map<String, String>>).map { it["id"]!! }.toSet()
                     if (storageService.groupExists(data["groupId"] as String)) {
                         logger.info("Notifying users of kicked user in ${data["groupId"]}")
-                        multicastToGroup(data)
+                        multicastToGroup(data, data["groupId"] as String)
                         return@executeBlocking
                     }
                     storageService.removeFromSet("GROUP:${data["groupId"] as String}", members)
@@ -274,7 +280,7 @@ class GatewayWebsocket {
                     logger.info("A new message/call has been received.")
                     if (storageService.groupExists(data["groupId"] as String)) {
                         logger.info("New message in ${data["groupId"]}")
-                        multicastToGroup(data)
+                        multicastToGroup(data, data["groupId"] as String)
                         return@executeBlocking
                     }
                 }
@@ -291,6 +297,10 @@ class GatewayWebsocket {
                     logger.info("An user fetched the members of a group.")
                 }
 
+                Event.FETCH_GROUP -> {
+                    logger.info("An user fetched a group")
+                }
+
                 else -> {
                     logger.info("TO DO() handle other events ${headers["EVENT"] as String}")
                     //session.asyncRemote.sendText("TO DO() handle other events")
@@ -302,8 +312,8 @@ class GatewayWebsocket {
         }
     }
 
-    private fun multicastToGroup(data: MutableMap<String, Any>) {
-        val members = storageService.getSet("GROUP:${data["groupId"]}")
+    private fun multicastToGroup(data: MutableMap<String, Any>, groupId: String) {
+        val members = storageService.getSet("GROUP:$groupId")
         for (member in members) {
             val memberSession = storageService.getString("USER:$member")
             logger.info("Member session: $memberSession")

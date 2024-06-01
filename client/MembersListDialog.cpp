@@ -44,6 +44,8 @@ void MembersListDialog::updateMembersList(QJsonObject eventData)
 {
     qDebug() << "Loading members list!";
 
+    ui->listMembers->clear();
+
     QJsonArray members = eventData["members"].toArray();
 
     for(int i = 0; i < members.count(); i++) {

@@ -8,5 +8,6 @@
     <qresource prefix="/images">
         <file>logo-no-background.png</file>
         <file>logo-black.png</file>
+        <file>camera-off.png</file>
     </qresource>
 </RCC>

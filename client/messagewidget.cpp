@@ -11,12 +11,35 @@ MessageWidget::MessageWidget(QWidget *parent, QString id, QString userId, QStrin
 
     this->id = id;
 
+    if (content.length() > 100 && !content.contains(' '))
+        for (int i = 0; i < content.length() / 100; i++)
+            content.insert((i + 1) * 100, '\n');
+
     ui->contentLabel->setText(content);
     ui->usernameLabel->setText(userId);
-    ui->timestampLabel->setText(timestamp == 0 ? "" : QDateTime::fromSecsSinceEpoch(timestamp/1000).toString("yyyy-MM-dd hh:mm:ss"));
+
+    quint64 secondsSinceMsg = timestamp/1000;
+    QString format = calculateTimeFormat(secondsSinceMsg);
+
+    ui->timestampLabel->setText(timestamp == 0 ? "" : QDateTime::fromSecsSinceEpoch(secondsSinceMsg).toString(format));
 }
 
 MessageWidget::~MessageWidget()
 {
     delete ui;
+}
+
+QString MessageWidget::calculateTimeFormat(quint64 secondsSinceMsg)
+{
+    quint64 secondsSinceEpoch = QDateTime::currentSecsSinceEpoch();
+    QString format = "yyyy-MM-dd hh:mm";
+
+    if (secondsSinceEpoch - secondsSinceMsg < 3600 * 24)
+        format = "hh:mm";
+    else if (secondsSinceEpoch - secondsSinceMsg < 3600 * 24 * 7)
+        format = "ddd hh:mm";
+    else if (secondsSinceEpoch - secondsSinceMsg < 3600 * 24 * 365)
+        format = "d MMMM";
+
+    return format;
 }

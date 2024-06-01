@@ -17,6 +17,8 @@ public:
     QString id;
 private:
     Ui::MessageWidget *ui;
+
+    QString calculateTimeFormat(quint64 secondsSinceMsg);
 };
 
 #endif // MESSAGEWIDGET_H

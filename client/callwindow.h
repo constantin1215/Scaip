@@ -59,6 +59,8 @@ private:
 
     QByteArray userIdBin;
 
+    QPixmap *logo = new QPixmap(":/images/camera-off.png");
+
     void initVideoClient(QString channel);
     void initCamera();
     void initAudioClient(QString channel);

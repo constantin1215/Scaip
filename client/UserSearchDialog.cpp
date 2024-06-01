@@ -28,6 +28,8 @@ void UserSearchDialog::updateResultsList(QJsonObject eventData)
 {
     qDebug() << "Updating results list";
 
+    ui->listSearchResult->clear();
+
     QJsonArray members = eventData["members"].toArray();
 
     this->searchResults = members;
