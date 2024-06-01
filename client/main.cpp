@@ -46,6 +46,7 @@ int main(int argc, char *argv[])
     EventHandler::connect(&eventHandler, &EventHandler::updateSearchResult, &w, &MainWindow::triggerPassSearchResultDialog);
     EventHandler::connect(&eventHandler, &EventHandler::updateMembersList, &w, &MainWindow::triggerPassToMembersDialog);
     EventHandler::connect(&w, &MainWindow::fetchMessages, &client, &WSClient::onFetchMessages);
+    EventHandler::connect(&w, &MainWindow::fetchGroup, &client, &WSClient::onFetchGroup);
     w.show();
 
     return a.exec();

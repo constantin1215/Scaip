@@ -433,7 +433,21 @@ void MainWindow::handleNewGroup(QJsonObject eventData)
 
 void MainWindow::handleNewMembers(QJsonObject eventData)
 {
+    QJsonArray members = eventData["members"].toArray();
 
+    if (members.empty())
+        return;
+
+    QString groupId = eventData["groupId"].toString();
+
+    for (int i = 0; i < members.count(); ++i) {
+        QString id = members[i].toObject()["id"].toString();
+
+        if (id == UserData::getInstance()->getId()) {
+            emit fetchGroup(groupId);
+            break;
+        }
+    }
 }
 
 void MainWindow::handleMemberRemoval(QJsonObject eventData)

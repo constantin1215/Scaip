@@ -37,6 +37,7 @@ public:
 
 Q_SIGNALS:
     void fetchMessages(QString groupId, qint64 timestamp);
+    void fetchGroup(QString groupId);
     void updateMembersList(QJsonObject eventData);
 public Q_SLOTS:
     void handleUpdateUI(UI_UpdateType type, QJsonObject eventData);

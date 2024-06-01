@@ -8,7 +8,8 @@ QT_USE_NAMESPACE
 
 enum class Events {
     FETCH_PROFILE,
-    FETCH_MESSAGES
+    FETCH_MESSAGES,
+    FETCH_GROUP
 };
 
 QString eventToString(Events event) {
@@ -17,6 +18,8 @@ QString eventToString(Events event) {
         return "FETCH_PROFILE";
     case Events::FETCH_MESSAGES:
         return "FETCH_MESSAGES";
+    case Events::FETCH_GROUP:
+        return "FETCH_GROUP";
     }
 }
 
@@ -74,6 +77,19 @@ void WSClient::onFetchMessages(QString groupId, qint64 timestamp)
     event.insert("JWT", UserData::getInstance()->getJWT());
     event.insert("timestamp", QStringLiteral("%1").arg(timestamp));
     event.insert("groupId", groupId);
+
+    QJsonDocument json(event);
+
+    this->sendEvent(QString::fromUtf8(json.toJson(QJsonDocument::Indented)));
+}
+
+void WSClient::onFetchGroup(QString groupId)
+{
+    QJsonObject event;
+
+    event.insert("EVENT", eventToString(Events::FETCH_GROUP));
+    event.insert("groupId", groupId);
+    event.insert("JWT", UserData::getInstance()->getJWT());
 
     QJsonDocument json(event);
 
