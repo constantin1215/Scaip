@@ -27,6 +27,7 @@ public:
     void handleGroupChatConversationUpdate(QJsonObject eventData);
     void handleGroupChatNewMessage(QJsonObject eventData);
     void handleInstantCall(QJsonObject eventData);
+    void handleScheduledCall(QJsonObject eventData);
     void handleJoinCall(QJsonObject eventData);
     void handleLogInFail(QJsonObject eventData);
     void handleRegisterFail(QJsonObject eventData);
@@ -73,6 +74,8 @@ private slots:
     void on_membersButton_clicked();
 
     void on_addMembersButton_clicked();
+
+    void on_scheduleButton_clicked();
 
 Q_SIGNALS:
     void passToSearchDialog(QJsonObject eventData);

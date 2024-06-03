@@ -13,6 +13,7 @@ SOURCES += \
     EventHandler.cpp \
     MembersListDialog.cpp \
     NewGroupDialog.cpp \
+    ScheduleCallDialog.cpp \
     UserData.cpp \
     UserSearchDialog.cpp \
     UserWidget.cpp \
@@ -31,6 +32,7 @@ HEADERS += \
     EventHandler.h \
     MembersListDialog.h \
     NewGroupDialog.h \
+    ScheduleCallDialog.h \
     UI_UpdateTypes.h \
     UserData.h \
     UserSearchDialog.h \
@@ -47,6 +49,7 @@ HEADERS += \
 FORMS += \
     MembersListDialog.ui \
     NewGroupDialog.ui \
+    ScheduleCallDialog.ui \
     UserSearchDialog.ui \
     UserWidget.ui \
     VideoMemberWidget.ui \

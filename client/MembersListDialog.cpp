@@ -20,6 +20,8 @@ MembersListDialog::MembersListDialog(QWidget *parent, QString groupName, QString
     qDebug() << this->type;
 
     ui->labelTitle->setText(groupName + "'s members");
+
+    ui->listMembers->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 }
 
 MembersListDialog::~MembersListDialog()

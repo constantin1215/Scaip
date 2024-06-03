@@ -6,6 +6,7 @@
 #include <QJsonArray>
 #include <QThread>
 #include <QTimer>
+#include <ScheduleCallDialog.h>
 #include <UserData.h>
 #include <UserSearchDialog.h>
 #include <calldialog.h>
@@ -94,6 +95,10 @@ MainWindow::MainWindow(QWidget *parent, WSClient *client)
     ui->input_last_name_register->setText("ciobanu");
 
     ui->logoMain->setPixmap(this->logo->copy().scaled(ui->logoMain->width(), ui->logoMain->height(), Qt::KeepAspectRatio));
+
+    ui->messagesListWidget->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->callListWidget->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->groupListWidget->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 }
 
 MainWindow::~MainWindow()
@@ -384,6 +389,11 @@ void MainWindow::handleInstantCall(QJsonObject eventData)
     }
 }
 
+void MainWindow::handleScheduledCall(QJsonObject eventData)
+{
+
+}
+
 void MainWindow::handleJoinCall(QJsonObject eventData)
 {
     if (eventData["_id"].isNull() || eventData["channel"].isNull() || eventData["channel"].toString().isEmpty()) {
@@ -535,6 +545,7 @@ void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
             break;
         case UI_UpdateType::NEW_SCHEDULED_CALL:
             qDebug() << "Type: NEW_SCHEDULED_CALL";
+            handleScheduledCall(eventData);
             break;
         case UI_UpdateType::JOIN_CALL:
             qDebug() << "Type: JOIN_CALL";
@@ -702,8 +713,6 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
         if (widget) {
             GroupWidget *groupWidget = qobject_cast<GroupWidget*>(widget);
 
-            qDebug() << groupWidget->getId();
-
             if (groupWidget) {
                 ui->stackedWidget_groups->setCurrentIndex(static_cast<int>(GroupStatus::GROUP_SELECTED));
                 this->selectedGroupId = groupWidget->getId();
@@ -846,6 +855,20 @@ void MainWindow::on_addMembersButton_clicked()
         QJsonDocument json(event);
 
         this->client->sendEvent(QString::fromUtf8(json.toJson(QJsonDocument::Indented)));
+    }
+}
+
+
+void MainWindow::on_scheduleButton_clicked()
+{
+    ScheduleCallDialog *scheduleCallDialog = new ScheduleCallDialog(this, ui->selectedGroupName_label->text(), this->selectedGroupId);
+
+    scheduleCallDialog->exec();
+
+    if (scheduleCallDialog->result() == QDialog::Accepted) {
+        qDebug() << "Scheduling call!";
+
+        this->client->sendEvent(QString::fromUtf8(scheduleCallDialog->getEvent().toJson(QJsonDocument::Indented)));
     }
 }
 

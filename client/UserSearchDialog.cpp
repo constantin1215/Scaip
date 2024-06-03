@@ -11,6 +11,9 @@ UserSearchDialog::UserSearchDialog(QWidget *parent)
     , ui(new Ui::UserSearchDialog)
 {
     ui->setupUi(this);
+
+    ui->listChosenUsers->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->listSearchResult->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 }
 
 UserSearchDialog::~UserSearchDialog()
