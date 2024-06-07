@@ -10,6 +10,7 @@ CONFIG += c++17
 
 SOURCES += \
     AudioWSClient.cpp \
+    CallWidget.cpp \
     EventHandler.cpp \
     MembersListDialog.cpp \
     NewGroupDialog.cpp \
@@ -29,6 +30,7 @@ SOURCES += \
 
 HEADERS += \
     AudioWSClient.h \
+    CallWidget.h \
     EventHandler.h \
     MembersListDialog.h \
     NewGroupDialog.h \
@@ -47,6 +49,7 @@ HEADERS += \
     messagewidget.h
 
 FORMS += \
+    CallWidget.ui \
     MembersListDialog.ui \
     NewGroupDialog.ui \
     ScheduleCallDialog.ui \

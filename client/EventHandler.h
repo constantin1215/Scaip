@@ -37,6 +37,7 @@ private:
     void handleNewMembers(QJsonObject eventData);
     void handleMemberRemoval(QJsonObject eventData);
     void handleFetchedGroup(QJsonObject eventData);
+    void handleFetchedCalls(QJsonObject eventData);
 };
 
 #endif // EVENTHANDLER_H

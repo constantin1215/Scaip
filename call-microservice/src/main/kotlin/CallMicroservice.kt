@@ -19,6 +19,7 @@ import repository.UserRepository
 import java.security.MessageDigest
 import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import kotlin.math.log
 
@@ -35,7 +36,12 @@ class CallMicroservice {
         NEW_CALL_SUCCESS,
         NEW_CALL_FAIL,
         JOIN_CALL,
-        UNAUTHORIZED
+        UNAUTHORIZED,
+        CALL_FINISHED,
+        JOINED_VIDEO,
+        LEFT_VIDEO,
+        JOINED_AUDIO,
+        LEFT_AUDIO
     }
 
     private val gson = Gson()
@@ -74,17 +80,14 @@ class CallMicroservice {
                     logger.info("Adding new user.")
                     handleNewUser(data)
                 }
-
                 Event.CREATE_GROUP_SUCCESS -> {
                     logger.info("Adding new group.")
                     handleNewGroup(data, headers)
                 }
-
                 Event.ADD_MEMBERS_SUCCESS -> {
                     logger.info("Adding new members to group.")
                     handleAddNewMembers(data, headers)
                 }
-
                 Event.REMOVE_MEMBERS_SUCCESS -> {
                     logger.info("Removing members from group.")
                     handleMemberRemoval(data, headers)
@@ -96,6 +99,26 @@ class CallMicroservice {
                 Event.JOIN_CALL -> {
                     logger.info("User wants to join call.")
                     handleJoinCall(data, headers)
+                }
+                Event.CALL_FINISHED -> {
+                    logger.info("Call finished!")
+                    handleCallFinished(data, headers)
+                }
+                Event.JOINED_VIDEO -> {
+                    logger.info("User joined call with video.")
+                    handleJoinedVideo(data, headers)
+                }
+                Event.LEFT_VIDEO -> {
+                    logger.info("User left call with video.")
+                    handleLeftVideo(data, headers)
+                }
+                Event.JOINED_AUDIO -> {
+                    logger.info("User joined call with audio.")
+                    handleJoinedAudio(data, headers)
+                }
+                Event.LEFT_AUDIO -> {
+                    logger.info("User left call with audio.")
+                    handleLeftAudio(data, headers)
                 }
                 else -> {
                     println("TO DO() handle ${headers["EVENT"] as String}")
@@ -112,6 +135,75 @@ class CallMicroservice {
         } catch (ex : Unauthorized) {
             logger.warn(ex.message)
         }
+    }
+
+    private fun handleLeftAudio(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        if (data["userId"] as String? == null || data["callId"] as String? == null) {
+            logger.warn("Missing fields!")
+            return
+        }
+
+        val userId = data["userId"] as String
+        val callId = data["callId"] as String
+
+        groupRepository.removeFromJoinedAudio(callId, userId)
+
+        if (!groupRepository.isCallEmpty(callId)) {
+            logger.info("Empty call!")
+        }
+    }
+
+    private fun handleJoinedAudio(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        if (data["userId"] as String? == null || data["callId"] as String? == null) {
+            logger.warn("Missing fields!")
+            return
+        }
+
+        val userId = data["userId"] as String
+        val callId = data["callId"] as String
+
+        groupRepository.addToJoinedAudio(callId, userId)
+
+        if (!groupRepository.isCallEmpty(callId)) {
+            logger.info("Empty call!")
+        }
+    }
+
+    private fun handleLeftVideo(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        if (data["userId"] as String? == null || data["callId"] as String? == null) {
+            logger.warn("Missing fields!")
+            return
+        }
+
+        val userId = data["userId"] as String
+        val callId = data["callId"] as String
+
+        groupRepository.removeFromJoinedVideo(callId, userId)
+
+        if (!groupRepository.isCallEmpty(callId)) {
+            logger.info("Empty call!")
+        }
+    }
+
+    private fun handleJoinedVideo(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        if (data["userId"] as String? == null || data["callId"] as String? == null) {
+            logger.warn("Missing fields!")
+            return
+        }
+
+        val userId = data["userId"] as String
+        val callId = data["callId"] as String
+
+        groupRepository.addToJoinedVideo(callId, userId)
+
+        if (!groupRepository.isCallEmpty(callId)) {
+            logger.info("Empty call!")
+        }
+    }
+
+    private fun handleCallFinished(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        logger.info(data)
+        throw RuntimeException()
     }
 
     fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }
@@ -160,17 +252,19 @@ class CallMicroservice {
             CallType.INSTANT -> {
                 newCall = Call(
                     userId,
-                    CallType.valueOf(data["type"] as String),
+                    callType,
                     channel
                 )
             }
             CallType.SCHEDULED -> {
-                val dateTime = LocalDateTime.parse(data["date"] as String, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                val dateTime = LocalDateTime.parse(data["date"] as String, DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")).toEpochSecond(ZoneOffset.UTC)
+                val title = data["title"] as String
                 newCall = Call(
                     userId,
-                    CallType.valueOf(data["type"] as String),
+                    callType,
                     channel,
-                    dateTime
+                    dateTime,
+                    title
                 )
             }
         }

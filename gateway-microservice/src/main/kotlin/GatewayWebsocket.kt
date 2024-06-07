@@ -66,6 +66,7 @@ class GatewayWebsocket {
         NEW_CALL_SUCCESS,
         NEW_CALL_FAIL,
         JOIN_CALL,
+        FETCH_CALLS
     }
 
     @Inject
@@ -256,9 +257,9 @@ class GatewayWebsocket {
                     if (storageService.groupExists(data["groupId"] as String)) {
                         logger.info("Notifying users of kicked user in ${data["groupId"]}")
                         multicastToGroup(data, data["groupId"] as String)
-                        return@executeBlocking
                     }
                     storageService.removeFromSet("GROUP:${data["groupId"] as String}", members)
+                    return@executeBlocking
                 }
 
                 Event.UNAUTHORIZED -> {
@@ -298,7 +299,11 @@ class GatewayWebsocket {
                 }
 
                 Event.FETCH_GROUP -> {
-                    logger.info("An user fetched a group")
+                    logger.info("An user fetched a group.")
+                }
+
+                Event.FETCH_CALLS -> {
+                    logger.info("An user fetched a group calls.")
                 }
 
                 else -> {

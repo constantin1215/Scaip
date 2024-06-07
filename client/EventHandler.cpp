@@ -20,7 +20,8 @@ enum class EventsReceived {
     FETCH_GROUP_MEMBERS,
     ADD_MEMBERS_SUCCESS,
     REMOVE_MEMBERS_SUCCESS,
-    FETCH_GROUP
+    FETCH_GROUP,
+    FETCH_CALLS
 };
 
 static const  QMap<QString, EventsReceived> events {
@@ -38,7 +39,8 @@ static const  QMap<QString, EventsReceived> events {
     {"FETCH_GROUP_MEMBERS", EventsReceived::FETCH_GROUP_MEMBERS},
     {"ADD_MEMBERS_SUCCESS", EventsReceived::ADD_MEMBERS_SUCCESS},
     {"REMOVE_MEMBERS_SUCCESS", EventsReceived::REMOVE_MEMBERS_SUCCESS},
-    {"FETCH_GROUP", EventsReceived::FETCH_GROUP}
+    {"FETCH_GROUP", EventsReceived::FETCH_GROUP},
+    {"FETCH_CALLS", EventsReceived::FETCH_CALLS}
 };
 
 EventHandler::EventHandler(MainWindow &ui, bool debug, QObject *parent) :
@@ -124,6 +126,9 @@ void EventHandler::handleEvent(QString jsonString)
             break;
         case EventsReceived::FETCH_GROUP:
             handleFetchedGroup(jsonObjEvent);
+            break;
+        case EventsReceived::FETCH_CALLS:
+            handleFetchedCalls(jsonObjEvent);
             break;
         }
 }
@@ -232,6 +237,13 @@ void EventHandler::handleFetchedGroup(QJsonObject eventData)
     qDebug() << "Handling FETCH_GROUP\n";
 
     emit updateUI(UI_UpdateType::NEW_GROUP, eventData);
+}
+
+void EventHandler::handleFetchedCalls(QJsonObject eventData)
+{
+    qDebug() << "Handling FETCH_CALLS\n";
+
+    emit updateUI(UI_UpdateType::UPDATE_CALLS_LIST, eventData);
 }
 
 void EventHandler::handleFetchedProfile(QJsonObject eventData)

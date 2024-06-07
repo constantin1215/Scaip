@@ -38,7 +38,8 @@ class QueryMicroservice {
         NEW_MESSAGE_SUCCESS,
         NEW_CALL_SUCCESS,
         FETCH_GROUP_MEMBERS,
-        FETCH_GROUP
+        FETCH_GROUP,
+        FETCH_CALLS
     }
 
     private val gson = Gson()
@@ -118,6 +119,10 @@ class QueryMicroservice {
                     logger.info("Fetch group info.")
                     handleGroupFetching(data, headers)
                 }
+                Event.FETCH_CALLS -> {
+                    logger.info("Fetch group calls.")
+                    handleCallsFetching(data, headers)
+                }
                 else -> { println("TO DO() handle ${headers["EVENT"] as String}") }
             }
         } catch (ex : EntityAlreadyInCollection) {
@@ -131,6 +136,26 @@ class QueryMicroservice {
         } catch (ex : IllegalArgumentException) {
             logger.warn("Unknown event possibly detected!")
         }
+    }
+
+    private fun handleCallsFetching(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        logger.info(data)
+
+        if((data["groupId"] as String?) == null)
+            return
+
+        val result = groupRepository.fetchGroupCalls(data["groupId"] as String)
+
+        val newMsg = Message
+            .of(result)
+            .addMetadata(
+                OutgoingKafkaRecordMetadata.builder<String>()
+                    .withHeaders(createHeaders(headers)).build()
+            )
+
+        gatewayEmitter.send(newMsg)
+
+        logger.info("Group calls fetched successfully.")
     }
 
     private fun handleGroupFetching(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
@@ -182,19 +207,19 @@ class QueryMicroservice {
                         data["_id"] as String,
                         data["leaderId"] as String,
                         type,
-                        (data["timestamp"] as MutableMap<String, String>)["\$numberLong"]!!.toLong()
+                        (data["timestamp"] as MutableMap<String, String>)["\$numberLong"]!!.toLong(),
+                        CallStatus.ONGOING
                     )
             }
             CallType.SCHEDULED -> {
-                val seconds = ((data["scheduledTime"] as MutableMap<String, Any>)["\$date"]!! as Double).toLong()
-                val date = ZonedDateTime.ofInstant(Instant.ofEpochMilli(seconds), ZoneId.systemDefault()).toLocalDateTime()
-
                 call = Call(
                     data["_id"] as String,
                     data["leaderId"] as String,
                     type,
-                    date,
+                    (data["scheduledTime"] as MutableMap<String, String>)["\$numberLong"]!!.toLong(),
                     (data["timestamp"] as MutableMap<String, String>)["\$numberLong"]!!.toLong(),
+                    data["title"] as String,
+                    CallStatus.SCHEDULED
                 )
             }
         }

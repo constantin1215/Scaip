@@ -40,4 +40,16 @@ class GroupRepository : PanacheMongoRepository<Group> {
 
         return result[0]
     }
+
+    fun fetchGroupCalls(id : String) : String {
+        val match : Bson = Document("\$match", Document("_id", id))
+        Document("\$filter", Document(mapOf("input" to "\$calls", "as" to "call", "cond" to Document("\$ne", arrayOf("\$\$call.status", "FINISHED")))))
+        val project : Bson = Document("\$project", Document(mapOf("_id" to 1, "calls" to Document("\$filter", Document(mapOf("input" to "\$calls", "as" to "call", "cond" to Document("\$ne", arrayListOf("\$\$call.status", "FINISHED"))))))))
+        val result =  mongoDatabase().getCollection("Groups").aggregate(listOf(match, project)).map { it.toJson() }.toList()
+
+        if (result.isEmpty())
+            return Document(mapOf("message" to "Group not found!")).toJson()
+
+        return result[0]
+    }
 }

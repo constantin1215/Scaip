@@ -23,7 +23,7 @@ public:
 protected:
     void accept() override {
         if (!ui->inputCallTitle->text().isEmpty() && !ui->inputCallTitle->text().isNull() &&
-            ui->dateTimeEdit->dateTime().toSecsSinceEpoch() > (QDateTime::currentSecsSinceEpoch() + 3600)) {
+            ui->dateTimeEdit->dateTime().toSecsSinceEpoch() > (QDateTime::currentSecsSinceEpoch() + 10)) {
             QJsonObject event;
 
             event.insert("EVENT", "NEW_CALL");

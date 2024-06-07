@@ -40,10 +40,11 @@ CallWindow::CallWindow(QWidget *parent, QJsonObject* eventData)
     session = new QMediaCaptureSession(this);
 
     QString channel = eventData->value("channel").toString();
+    QString id = eventData->value("callId").toString();
 
-    initVideoClient(channel);
+    initVideoClient(channel, id);
     initCamera();
-    initAudioClient(channel);
+    initAudioClient(channel, id);
     checkPermissions();
 
     const QList<QAudioDevice> audioInputDevices = QMediaDevices::audioInputs();
@@ -68,13 +69,13 @@ CallWindow::CallWindow(QWidget *parent, QJsonObject* eventData)
     initAudioOutput();
 }
 
-void CallWindow::initVideoClient(QString channel)
+void CallWindow::initVideoClient(QString channel, QString id)
 {
     QUrl urlVideo;
     urlVideo.setScheme("ws");
     urlVideo.setHost("localhost");
     urlVideo.setPort(8081);
-    urlVideo.setPath(QString("/video/%1/%2").arg(channel, UserData::getInstance()->getId()));
+    urlVideo.setPath(QString("/video/%1/%2/%3").arg(channel, id, UserData::getInstance()->getId()));
 
     videoClient = new VideoWSClient(urlVideo, true, this);
 
@@ -121,13 +122,13 @@ void CallWindow::initCamera()
         connect(player->videoSink(), &QVideoSink::videoFrameChanged, this, &CallWindow::processFrame);
 }
 
-void CallWindow::initAudioClient(QString channel)
+void CallWindow::initAudioClient(QString channel, QString id)
 {
     QUrl urlAudio;
     urlAudio.setScheme("ws");
     urlAudio.setHost("localhost");
     urlAudio.setPort(8082);
-    urlAudio.setPath(QString("/audio/%1/%2").arg(channel, UserData::getInstance()->getId()));
+    urlAudio.setPath(QString("/audio/%1/%2/%3").arg(channel, id, UserData::getInstance()->getId()));
 
     audioClient = new AudioWSClient(urlAudio, true, this);
 

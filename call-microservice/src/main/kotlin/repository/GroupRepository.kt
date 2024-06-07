@@ -6,6 +6,7 @@ import io.quarkus.mongodb.panache.kotlin.PanacheMongoRepository
 import jakarta.enterprise.context.ApplicationScoped
 import org.bson.Document
 import org.bson.conversions.Bson
+import javax.print.Doc
 
 @ApplicationScoped
 class GroupRepository : PanacheMongoRepository<Group> {
@@ -16,7 +17,7 @@ class GroupRepository : PanacheMongoRepository<Group> {
         val project1 : Bson = Document("\$project", Document("calls", 1))
         val unwind : Bson = Document("\$unwind", "\$calls")
         val match2 : Bson = Document("\$match", Document("calls._id", callId))
-        val project2 : Bson = Document("\$project", Document("channel", "\$calls.channel"))
+        val project2 : Bson = Document("\$project", Document(mapOf("channel" to "\$calls.channel", "callId" to "\$calls._id")))
 
         val list = mongoDatabase().getCollection("Group").aggregate(listOf(match, project1, unwind, match2, project2)).map { it.toJson() }.toList()
 
@@ -24,5 +25,46 @@ class GroupRepository : PanacheMongoRepository<Group> {
             return Document(mapOf("_id" to groupId, "channel" to "")).toJson()
         }
         return list[0]
+    }
+
+    fun addToJoinedVideo(callId: String, userId: String) {
+        val match : Bson = Document("calls._id", callId)
+        val update : Bson = Document("\$addToSet", Document("calls.\$.joinedVideo", userId))
+
+        mongoDatabase().getCollection("Group").updateOne(match, update)
+    }
+
+    fun removeFromJoinedVideo(callId: String, userId: String) {
+        val match : Bson = Document("calls._id", callId)
+        val update : Bson = Document("\$pull", Document("calls.\$.joinedVideo", userId))
+
+        mongoDatabase().getCollection("Group").updateOne(match, update)
+    }
+
+    fun addToJoinedAudio(callId: String, userId: String) {
+        val match : Bson = Document("calls._id", callId)
+        val update : Bson = Document("\$addToSet", Document("calls.\$.joinedAudio", userId))
+
+        mongoDatabase().getCollection("Group").updateOne(match, update)
+    }
+
+    fun removeFromJoinedAudio(callId: String, userId: String) {
+        val match : Bson = Document("calls._id", callId)
+        val update : Bson = Document("\$pull", Document("calls.\$.joinedAudio", userId))
+
+        mongoDatabase().getCollection("Group").updateOne(match, update)
+    }
+
+    fun isCallEmpty(callId: String) : Boolean {
+        val match : Bson = Document("calls",
+            Document("\$elemMatch",
+                Document(mapOf("_id" to callId,
+                    "joinedVideo" to Document("\$eq", arrayListOf<String>()),
+                    "joinedAudio" to Document("\$eq", arrayListOf<String>())
+                ))))
+
+        val result = mongoDatabase().getCollection("Group").find(match).map { it.toJson() }.toList()
+
+        return result.isEmpty()
     }
 }

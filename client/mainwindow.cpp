@@ -2,6 +2,7 @@
 #include "NewGroupDialog.h"
 #include "ui_mainwindow.h"
 
+#include <CallWidget.h>
 #include <MembersListDialog.h>
 #include <QJsonArray>
 #include <QThread>
@@ -47,6 +48,7 @@ enum class CallTypes {
 
 QMap<QString, QList<QJsonObject>> groupConversations;
 QMap<QString, int> groupLastMessagesFetchedCount;
+QMap<QString, QList<QJsonObject>> groupCalls;
 
 QString eventToString(EventsUI event) {
     switch(event) {
@@ -179,6 +181,9 @@ void MainWindow::handleProfileFetchUpdate()
         ui->backButton_2->setEnabled(true);
         ui->log_in_Button->setEnabled(true);
     });
+
+    ui->callListWidget->hide();
+    ui->labelCallList->hide();
 }
 
 void MainWindow::prependNewMessages(QJsonArray recentMessages, QString groupId)
@@ -362,10 +367,41 @@ QJsonDocument createJoinCallEvent(QJsonObject eventData) {
 
 void MainWindow::handleInstantCall(QJsonObject eventData)
 {
-    if (eventData["groupId"].isNull() || eventData["_id"].isNull()) {
+    if (eventData["groupId"].isNull() ||
+        eventData["_id"].isNull() ||
+        eventData["leaderId"].isNull() ||
+        eventData["status"].isNull() ||
+        eventData["type"].isNull()) {
         qDebug() << "Missing mandatory fields on new instant call!";
         return;
     }
+
+    QJsonObject call;
+
+    call.insert("_id", eventData["_id"].toString());
+    call.insert("groupId", eventData["groupId"].toString());
+    call.insert("leaderId", eventData["leaderId"].toString());
+    call.insert("status", eventData["status"].toString());
+    call.insert("type", eventData["type"].toString());
+    call.insert("title", "Call " + QString::number(groupCalls[eventData["groupId"].toString()].size() + 1));
+
+    groupCalls[eventData["groupId"].toString()] << call;
+
+    CallWidget *widget = new CallWidget(this,
+                                        call["_id"].toString(),
+                                        call["groupId"].toString(),
+                                        call["leaderId"].toString(),
+                                        call["status"].toString(),
+                                        call["title"].toString(),
+                                        call["type"].toString());
+
+    QObject::connect(widget, &CallWidget::sendEvent, this, &MainWindow::sendEvent);
+
+    QListWidgetItem *item = new QListWidgetItem();
+
+    item->setSizeHint(widget->sizeHint());
+    ui->callListWidget->insertItem(0, item);
+    ui->callListWidget->setItemWidget(item, widget);
 
     if (!eventData["leaderId"].isNull() && eventData["leaderId"].toString() == UserData::getInstance()->getId() ) {
         qDebug() << "Leader joining the call immediately";
@@ -391,7 +427,41 @@ void MainWindow::handleInstantCall(QJsonObject eventData)
 
 void MainWindow::handleScheduledCall(QJsonObject eventData)
 {
+    qDebug() << eventData;
 
+    QJsonObject call;
+
+    call.insert("_id", eventData["_id"].toString());
+    call.insert("groupId", eventData["groupId"].toString());
+    call.insert("leaderId", eventData["leaderId"].toString());
+    call.insert("status", eventData["status"].toString());
+    call.insert("type", eventData["type"].toString());
+    call.insert("title", eventData["title"].toString());
+
+    qint64 seconds = eventData["scheduledTime"].toObject()["$numberLong"].toString().toLongLong();
+
+    qDebug() << seconds;
+
+    call.insert("scheduledTime", seconds);
+
+    groupCalls[eventData["groupId"].toString()] << call;
+
+    CallWidget *widget = new CallWidget(this,
+                                        call["_id"].toString(),
+                                        call["groupId"].toString(),
+                                        call["leaderId"].toString(),
+                                        call["status"].toString(),
+                                        call["title"].toString(),
+                                        call["type"].toString(),
+                                        call["scheduledTime"].toInteger());
+
+    QObject::connect(widget, &CallWidget::sendEvent, this, &MainWindow::sendEvent);
+
+    QListWidgetItem *item = new QListWidgetItem();
+
+    item->setSizeHint(widget->sizeHint());
+    ui->callListWidget->insertItem(0, item);
+    ui->callListWidget->setItemWidget(item, widget);
 }
 
 void MainWindow::handleJoinCall(QJsonObject eventData)
@@ -523,6 +593,45 @@ void MainWindow::handleMemberRemoval(QJsonObject eventData)
     emit updateMembersList(eventData);
 }
 
+void MainWindow::handleFetchedCalls(QJsonObject eventData)
+{
+    QString groupId = eventData["_id"].toString();
+    QJsonArray calls = eventData["calls"].toArray();
+
+    for (int i = 0; i < calls.count(); ++i) {
+        QJsonObject call = calls.at(i).toObject();
+
+        qDebug() << call;
+
+        if (call["type"].toString() == "INSTANT")
+            call.insert("title", "Call " + QString::number(i + 1));
+
+        qint64 seconds = 0;
+        if (call["type"].toString() == "SCHEDULED") {
+            seconds = call["scheduledTime"].toInteger();
+            call["scheduledTime"] = seconds;
+        }
+
+        groupCalls[groupId] << call;
+
+        CallWidget *widget = new CallWidget(this,
+                                            call["_id"].toString(),
+                                            groupId,
+                                            call["leaderId"].toString(),
+                                            call["status"].toString(),
+                                            call["title"].toString(),
+                                            call["type"].toString(),
+                                            seconds);
+
+        QObject::connect(widget, &CallWidget::sendEvent, this, &MainWindow::sendEvent);
+
+        QListWidgetItem *item = new QListWidgetItem(ui->callListWidget);
+
+        item->setSizeHint(widget->sizeHint());
+        ui->callListWidget->setItemWidget(item, widget);
+    }
+}
+
 void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
 {
     qDebug() << "Updating UI";
@@ -574,6 +683,10 @@ void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
         case UI_UpdateType::REMOVE_GROUP_MEMBERS:
             qDebug() << "Type: REMOVE_GROUP_MEMBERS";
             handleMemberRemoval(eventData);
+            break;
+        case UI_UpdateType::UPDATE_CALLS_LIST:
+            qDebug() << "Type: UPDATE_CALLS_LIST";
+            handleFetchedCalls(eventData);
             break;
         }
 }
@@ -717,6 +830,12 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
                 ui->stackedWidget_groups->setCurrentIndex(static_cast<int>(GroupStatus::GROUP_SELECTED));
                 this->selectedGroupId = groupWidget->getId();
                 this->selectedGroupOwnerId = groupWidget->getOwnerId();
+
+                if (ui->callListWidget->isHidden() && ui->labelCallList->isHidden()) {
+                    ui->callListWidget->show();
+                    ui->labelCallList->show();
+                }
+
                 ui->selectedGroupName_label->setText(groupWidget->getGroupName());
 
                 if (ui->messagesListWidget->count() > 0)
@@ -756,6 +875,7 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
                 if (!groupWidget->getOpenedStatus()) {
                     groupWidget->setOpenedStatus(true);
                     emit fetchMessages(groupWidget->getId(), groupWidget->getTimestmap());
+                    emit fetchCalls(groupWidget->getId());
                 }
 
                 if (UserData::getInstance()->getId() != groupWidget->getOwnerId()) {
@@ -765,6 +885,29 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
                 else {
                     ui->addMembersButton->show();
                     this->roleInSelectedGroup = "OWNER";
+                }
+
+                if (ui->callListWidget->count() > 0)
+                    ui->callListWidget->clear();
+
+                QList<QJsonObject> calls = groupCalls[groupWidget->getId()];
+
+                for (int i = 0; i < calls.count(); ++i) {
+                    QJsonObject call = calls[i];
+
+                    CallWidget *widget = new CallWidget(this,
+                                                        call["_id"].toString(),
+                                                        groupWidget->getId(),
+                                                        call["leaderId"].toString(),
+                                                        call["status"].toString(),
+                                                        call["title"].toString(),
+                                                        call["type"].toString(),
+                                                        call["type"].toString() == "SCHEDULED" ? call["scheduledTime"].toInteger() : 0);
+
+                    QListWidgetItem *item = new QListWidgetItem(ui->callListWidget);
+
+                    item->setSizeHint(widget->sizeHint());
+                    ui->callListWidget->setItemWidget(item, widget);
                 }
             }
         }

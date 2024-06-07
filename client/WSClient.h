@@ -16,6 +16,7 @@ public Q_SLOTS:
     void onFetchProfile(QString JWT);
     void onFetchMessages(QString groupId, qint64 timestamp);
     void onFetchGroup(QString groupId);
+    void onFetchCalls(QString groupId);
 
 private Q_SLOTS:
     void onConnected();

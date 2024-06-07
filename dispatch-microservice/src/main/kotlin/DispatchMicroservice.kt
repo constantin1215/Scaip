@@ -44,7 +44,8 @@ class DispatchMicroservice {
         NEW_CALL_FAIL,
         JOIN_CALL,
         FETCH_GROUP_MEMBERS,
-        FETCH_GROUP
+        FETCH_GROUP,
+        FETCH_CALLS
     }
 
     private val gson = Gson()
@@ -112,6 +113,7 @@ class DispatchMicroservice {
                 Event.FETCH_USERS_BY_QUERY,
                 Event.FETCH_GROUP_MEMBERS,
                 Event.FETCH_GROUP,
+                Event.FETCH_CALLS,
                 Event.FETCH_PROFILE -> queryEmitter.send(newMsg)
 
                 Event.CREATE_GROUP,

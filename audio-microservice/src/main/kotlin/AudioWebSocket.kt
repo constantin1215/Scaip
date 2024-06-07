@@ -11,6 +11,7 @@ import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.clients.consumer.ConsumerRecords
 import org.apache.kafka.clients.consumer.KafkaConsumer
+import org.apache.kafka.common.header.internals.RecordHeaders
 import org.eclipse.microprofile.config.ConfigProvider
 import org.eclipse.microprofile.reactive.messaging.Channel
 import org.eclipse.microprofile.reactive.messaging.Emitter
@@ -24,7 +25,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 @ApplicationScoped
-@ServerEndpoint("/audio/{channel}/{userId}")
+@ServerEndpoint("/audio/{channel}/{callId}/{userId}")
 class AudioWebSocket {
     private val gson = Gson()
     private val type = object : TypeToken<Map<String, Any>>() {}.type
@@ -38,7 +39,9 @@ class AudioWebSocket {
         CREATE_GROUP_SUCCESS,
         ADD_MEMBERS_SUCCESS,
         REMOVE_MEMBERS_SUCCESS,
-        NEW_CALL_SUCCESS
+        NEW_CALL_SUCCESS,
+        JOINED_AUDIO,
+        LEFT_AUDIO
     }
 
     @Inject
@@ -48,8 +51,12 @@ class AudioWebSocket {
     @Channel("channel-audio")
     lateinit var emitter : Emitter<ByteBuffer>
 
+    @Inject
+    @Channel("call_topic")
+    lateinit var callEmitter : Emitter<String>
+
     @OnOpen
-    fun onOpen(session: Session?, @PathParam("channel") channel: String, @PathParam("userId") userId: String) {
+    fun onOpen(session: Session?, @PathParam("channel") channel: String, @PathParam("callId") callId: String, @PathParam("userId") userId: String) {
         logger.info("connection video from $userId to channel: $channel> ${session!!.id}")
         sessions[userId] = session
 
@@ -89,13 +96,30 @@ class AudioWebSocket {
             consumers[channel] = consumerThread
         }
 
-        multicastMessage(gson.toJson(mapOf("EVENT" to "JOINED_AUDIO", "userId" to userId)), session.id, channel)
+        multicastMessage(gson.toJson(mapOf("EVENT" to Event.JOINED_AUDIO.toString(), "userId" to userId)), session.id, channel)
         val members = sessions.keys.filter { it != userId }
-        session.asyncRemote.sendText(gson.toJson(mapOf("EVENT" to "JOINED_AUDIO", "members" to members)))
+        session.asyncRemote.sendText(gson.toJson(mapOf("EVENT" to Event.JOINED_AUDIO.toString(), "members" to members)))
+
+        val headers = createHeaders(Event.JOINED_AUDIO)
+
+        val newMsg = Message
+            .of(gson.toJson(mapOf("userId" to userId, "callId" to callId)))
+            .addMetadata(
+                OutgoingKafkaRecordMetadata.builder<String>()
+                    .withHeaders(headers).build()
+            )
+
+        callEmitter.send(newMsg)
+    }
+
+    private fun createHeaders(event: Event): RecordHeaders {
+        val headers = RecordHeaders()
+        headers.add("EVENT", event.toString().encodeToByteArray())
+        return headers
     }
 
     @OnClose
-    fun onClose(session: Session?, @PathParam("channel") channel: String, @PathParam("userId") userId: String) {
+    fun onClose(session: Session?, @PathParam("channel") channel: String, @PathParam("callId") callId: String, @PathParam("userId") userId: String) {
         logger.info("exit video from $userId to channel: $channel> ${session!!.id}")
         sessions.remove(userId)
 
@@ -108,21 +132,29 @@ class AudioWebSocket {
         }
 
         logger.info(channels)
-        multicastMessage(gson.toJson(mapOf("EVENT" to "LEFT_AUDIO", "userId" to userId)), session.id, channel)
+        multicastMessage(gson.toJson(mapOf("EVENT" to Event.LEFT_AUDIO.toString(), "userId" to userId)), session.id, channel)
+
+        val headers = createHeaders(Event.LEFT_AUDIO)
+
+        val newMsg = Message
+            .of(gson.toJson(mapOf("userId" to userId, "callId" to callId)))
+            .addMetadata(
+                OutgoingKafkaRecordMetadata.builder<String>()
+                    .withHeaders(headers).build()
+            )
+
+        callEmitter.send(newMsg)
     }
 
     @OnError
-    fun onError(session: Session?, @PathParam("channel") channel: String, @PathParam("userId") userId: String, throwable: Throwable) {
+    fun onError(session: Session?, @PathParam("channel") channel: String, @PathParam("callId") callId: String, @PathParam("userId") userId: String, throwable: Throwable) {
         logger.info("error >")
         logger.warn(throwable.message)
         throwable.printStackTrace()
     }
 
     @OnMessage
-    fun onMessage(session: Session?, bytes: ByteBuffer, @PathParam("channel") channel: String, @PathParam("userId") userId: String) {
-        //logger.info("frame > $bytes")
-        //multicastBinary(bytes, session!!.id, channel)
-
+    fun onMessage(session: Session?, bytes: ByteBuffer, @PathParam("channel") channel: String, @PathParam("callId") callId: String, @PathParam("userId") userId: String) {
         val metadata: OutgoingKafkaRecordMetadata<*> = OutgoingKafkaRecordMetadata.builder<Any>()
             .withTopic("audio-$channel")
             .build()
@@ -194,9 +226,9 @@ class AudioWebSocket {
                 }
                 Event.NEW_CALL_SUCCESS -> {
                     logger.info("Handling new call")
-                    logger.info(data)
-                    logger.info(headers)
+                    storageService.setString("CALL:${data["_id"]}", data["status"] as String, 7200)
                 }
+                else -> {}
             }
         }
     }

@@ -1,11 +1,16 @@
 package entity
 
-import java.time.LocalDateTime
 import java.util.*
 import kotlin.properties.Delegates
 
 enum class CallType {
     INSTANT,
+    SCHEDULED
+}
+
+enum class CallStatus {
+    ONGOING,
+    FINISHED,
     SCHEDULED
 }
 
@@ -16,7 +21,11 @@ class Call() {
     var groupId : String? = null
     var timestamp by Delegates.notNull<Long>()
     lateinit var channel : String
-    var scheduledTime : LocalDateTime?= null
+    var scheduledTime : Long?= null
+    lateinit var status : CallStatus
+    var title : String? = null
+    lateinit var joinedVideo : MutableSet<String>
+    lateinit var joinedAudio : MutableSet<String>
 
     constructor(
         leaderId : String,
@@ -27,22 +36,30 @@ class Call() {
         this.type = type
         this.timestamp = System.currentTimeMillis()
         this.channel = channel
+        this.status = CallStatus.ONGOING
+        this.joinedVideo = mutableSetOf()
+        this.joinedAudio = mutableSetOf()
     }
 
     constructor(
         leaderId : String,
         type : CallType,
         channel : String,
-        scheduledTime: LocalDateTime
+        scheduledTime: Long,
+        title: String
     ) : this() {
         this.leaderId = leaderId
         this.type = type
         this.timestamp = System.currentTimeMillis()
         this.channel = channel
         this.scheduledTime = scheduledTime
+        this.status = CallStatus.SCHEDULED
+        this.title = title
+        this.joinedVideo = mutableSetOf()
+        this.joinedAudio = mutableSetOf()
     }
 
     override fun toString(): String {
-        return "Call(id='$id', leaderId='$leaderId', type=$type, groupId=$groupId, timestamp=$timestamp, channel='$channel', scheduledTime=$scheduledTime)"
+        return "Call(id='$id', leaderId='$leaderId', type=$type, groupId=$groupId, timestamp=$timestamp, channel='$channel', scheduledTime=$scheduledTime, status=$status)"
     }
 }

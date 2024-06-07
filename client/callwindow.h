@@ -61,9 +61,9 @@ private:
 
     QPixmap *logo = new QPixmap(":/images/camera-off.png");
 
-    void initVideoClient(QString channel);
+    void initVideoClient(QString channel, QString id);
     void initCamera();
-    void initAudioClient(QString channel);
+    void initAudioClient(QString channel, QString id);
     void checkPermissions();
     void initAudioInput(const QAudioDevice &deviceInfo);
     void initAudioOutput();

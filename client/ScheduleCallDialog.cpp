@@ -11,6 +11,7 @@ ScheduleCallDialog::ScheduleCallDialog(QWidget *parent, QString groupTitle, QStr
 
     ui->labelMessage->setStyleSheet("color: #AA1111");
     ui->labelTitle->setText("Schedule call for " + groupTitle);
+    ui->dateTimeEdit->setDateTime(QDateTime::currentDateTime());
 }
 
 ScheduleCallDialog::~ScheduleCallDialog()
