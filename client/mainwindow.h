@@ -36,6 +36,7 @@ public:
     void handleNewMembers(QJsonObject eventData);
     void handleMemberRemoval(QJsonObject eventData);
     void handleFetchedCalls(QJsonObject eventData);
+    void handleFinishedCall(QJsonObject eventData);
 
 Q_SIGNALS:
     void fetchMessages(QString groupId, qint64 timestamp);

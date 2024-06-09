@@ -21,7 +21,8 @@ enum class EventsReceived {
     ADD_MEMBERS_SUCCESS,
     REMOVE_MEMBERS_SUCCESS,
     FETCH_GROUP,
-    FETCH_CALLS
+    FETCH_CALLS,
+    CALL_FINISHED
 };
 
 static const  QMap<QString, EventsReceived> events {
@@ -40,7 +41,8 @@ static const  QMap<QString, EventsReceived> events {
     {"ADD_MEMBERS_SUCCESS", EventsReceived::ADD_MEMBERS_SUCCESS},
     {"REMOVE_MEMBERS_SUCCESS", EventsReceived::REMOVE_MEMBERS_SUCCESS},
     {"FETCH_GROUP", EventsReceived::FETCH_GROUP},
-    {"FETCH_CALLS", EventsReceived::FETCH_CALLS}
+    {"FETCH_CALLS", EventsReceived::FETCH_CALLS},
+    {"CALL_FINISHED", EventsReceived::CALL_FINISHED}
 };
 
 EventHandler::EventHandler(MainWindow &ui, bool debug, QObject *parent) :
@@ -129,6 +131,9 @@ void EventHandler::handleEvent(QString jsonString)
             break;
         case EventsReceived::FETCH_CALLS:
             handleFetchedCalls(jsonObjEvent);
+            break;
+        case EventsReceived::CALL_FINISHED:
+            handleFinishedCall(jsonObjEvent);
             break;
         }
 }
@@ -244,6 +249,13 @@ void EventHandler::handleFetchedCalls(QJsonObject eventData)
     qDebug() << "Handling FETCH_CALLS\n";
 
     emit updateUI(UI_UpdateType::UPDATE_CALLS_LIST, eventData);
+}
+
+void EventHandler::handleFinishedCall(QJsonObject eventData)
+{
+    qDebug() << "Handling CALL_FINISHED\n";
+
+    emit updateUI(UI_UpdateType::REMOVE_FINISHED_CALL, eventData);
 }
 
 void EventHandler::handleFetchedProfile(QJsonObject eventData)

@@ -632,6 +632,21 @@ void MainWindow::handleFetchedCalls(QJsonObject eventData)
     }
 }
 
+void MainWindow::handleFinishedCall(QJsonObject eventData)
+{
+    if (eventData["groupId"].toString() == this->selectedGroupId) {
+        for (int i = 0; i < ui->callListWidget->count(); ++i) {
+            QListWidgetItem *item = ui->callListWidget->item(i);
+            CallWidget *widget = qobject_cast<CallWidget*>(ui->callListWidget->itemWidget(item));
+
+            if (widget->getId() == eventData["_id"].toString()) {
+                ui->callListWidget->takeItem(i);
+                break;
+            }
+        }
+    }
+}
+
 void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
 {
     qDebug() << "Updating UI";
@@ -687,6 +702,10 @@ void MainWindow::handleUpdateUI(UI_UpdateType type, QJsonObject eventData)
         case UI_UpdateType::UPDATE_CALLS_LIST:
             qDebug() << "Type: UPDATE_CALLS_LIST";
             handleFetchedCalls(eventData);
+            break;
+        case UI_UpdateType::REMOVE_FINISHED_CALL:
+            qDebug() << "Type: REMOVE_FINISHED_CALL";
+            handleFinishedCall(eventData);
             break;
         }
 }

@@ -23,6 +23,8 @@ public:
                         qint64 scheduledTime = 0);
     ~CallWidget();
 
+    QString getId();
+
 Q_SIGNALS:
     void sendEvent(QJsonDocument eventData);
 

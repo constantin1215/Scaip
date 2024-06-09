@@ -10,7 +10,6 @@ import org.eclipse.microprofile.reactive.messaging.Emitter
 import org.eclipse.microprofile.reactive.messaging.Incoming
 import org.eclipse.microprofile.reactive.messaging.Message
 import org.jboss.logging.Logger
-import java.util.concurrent.CompletableFuture
 
 @ApplicationScoped
 class DispatchMicroservice {
@@ -45,7 +44,8 @@ class DispatchMicroservice {
         JOIN_CALL,
         FETCH_GROUP_MEMBERS,
         FETCH_GROUP,
-        FETCH_CALLS
+        FETCH_CALLS,
+        CALL_FINISHED
     }
 
     private val gson = Gson()
@@ -194,9 +194,6 @@ class DispatchMicroservice {
         val payload = parsedData["data"]
         val sessionId = parsedData["sessionid"]
 
-//        println(event)
-//        println(payload)
-
         val newHeaders = createHeaders(sessionId!!, event!!)
 
         when (Event.valueOf(event)) {
@@ -255,6 +252,7 @@ class DispatchMicroservice {
 
         when(Event.valueOf(event)) {
             Event.NEW_CALL_FAIL -> notifyOfFailedEvent(details, newHeaders)
+            Event.CALL_FINISHED,
             Event.NEW_CALL_SUCCESS -> notifyOfSuccessfulEvent(
                 payload,
                 newHeaders,

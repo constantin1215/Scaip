@@ -15,7 +15,7 @@ enum class CallStatus {
 }
 
 class Call() {
-    val id : String = UUID.randomUUID().toString()
+    var id : String = UUID.randomUUID().toString()
     lateinit var leaderId : String
     lateinit var type: CallType
     var groupId : String? = null
@@ -55,6 +55,22 @@ class Call() {
         this.scheduledTime = scheduledTime
         this.status = CallStatus.SCHEDULED
         this.title = title
+        this.joinedVideo = mutableSetOf()
+        this.joinedAudio = mutableSetOf()
+    }
+
+    constructor(
+        id: String,
+        groupId: String
+    ) : this() {
+        this.id = id
+        this.groupId = groupId
+
+        this.leaderId = ""
+        this.type = CallType.INSTANT
+        this.timestamp = 0
+        this.channel = ""
+        this.status = CallStatus.FINISHED
         this.joinedVideo = mutableSetOf()
         this.joinedAudio = mutableSetOf()
     }

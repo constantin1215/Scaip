@@ -43,7 +43,8 @@ class VideoWebSocket {
         REMOVE_MEMBERS_SUCCESS,
         NEW_CALL_SUCCESS,
         JOINED_VIDEO,
-        LEFT_VIDEO
+        LEFT_VIDEO,
+        CALL_FINISHED
     }
 
     @Inject
@@ -229,6 +230,10 @@ class VideoWebSocket {
                 Event.NEW_CALL_SUCCESS -> {
                     logger.info("Handling new call")
                     storageService.setString("CALL:${data["_id"]}", data["status"] as String, 7200)
+                }
+                Event.CALL_FINISHED -> {
+                    logger.info("Updating call status!")
+                    storageService.setString("CALL:${data["_id"]}", "FINISHED", 7200)
                 }
 
                 else -> {}

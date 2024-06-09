@@ -61,6 +61,11 @@ CallWidget::~CallWidget()
     delete ui;
 }
 
+QString CallWidget::getId()
+{
+    return this->id;
+}
+
 void CallWidget::on_joinButton_clicked()
 {
     QJsonObject event;

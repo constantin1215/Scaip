@@ -66,7 +66,8 @@ class GatewayWebsocket {
         NEW_CALL_SUCCESS,
         NEW_CALL_FAIL,
         JOIN_CALL,
-        FETCH_CALLS
+        FETCH_CALLS,
+        CALL_FINISHED
     }
 
     @Inject
@@ -277,10 +278,11 @@ class GatewayWebsocket {
                 }
 
                 Event.NEW_MESSAGE_SUCCESS,
-                Event.NEW_CALL_SUCCESS -> {
-                    logger.info("A new message/call has been received.")
+                Event.NEW_CALL_SUCCESS,
+                Event.CALL_FINISHED -> {
+                    logger.info("A new message/call/update has been received.")
                     if (storageService.groupExists(data["groupId"] as String)) {
-                        logger.info("New message in ${data["groupId"]}")
+                        logger.info("New message/call/update in ${data["groupId"]}")
                         multicastToGroup(data, data["groupId"] as String)
                         return@executeBlocking
                     }

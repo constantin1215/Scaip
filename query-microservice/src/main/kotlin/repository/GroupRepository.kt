@@ -52,4 +52,11 @@ class GroupRepository : PanacheMongoRepository<Group> {
 
         return result[0]
     }
+
+    fun finishCall(callId: String) {
+        val match : Bson = Document("calls._id", callId)
+        val update : Bson = Document("\$set", Document("calls.\$.status", "FINISHED"))
+
+        mongoDatabase().getCollection("Groups").updateOne(match, update)
+    }
 }

@@ -100,25 +100,12 @@ class CallMicroservice {
                     logger.info("User wants to join call.")
                     handleJoinCall(data, headers)
                 }
-                Event.CALL_FINISHED -> {
-                    logger.info("Call finished!")
-                    handleCallFinished(data, headers)
-                }
-                Event.JOINED_VIDEO -> {
-                    logger.info("User joined call with video.")
-                    handleJoinedVideo(data, headers)
-                }
-                Event.LEFT_VIDEO -> {
-                    logger.info("User left call with video.")
-                    handleLeftVideo(data, headers)
-                }
-                Event.JOINED_AUDIO -> {
-                    logger.info("User joined call with audio.")
-                    handleJoinedAudio(data, headers)
-                }
+                Event.JOINED_VIDEO,
+                Event.LEFT_VIDEO,
+                Event.JOINED_AUDIO,
                 Event.LEFT_AUDIO -> {
-                    logger.info("User left call with audio.")
-                    handleLeftAudio(data, headers)
+                    logger.info("Handling call member count change.")
+                    handleMemberCountChange(data, headers)
                 }
                 else -> {
                     println("TO DO() handle ${headers["EVENT"] as String}")
@@ -137,7 +124,7 @@ class CallMicroservice {
         }
     }
 
-    private fun handleLeftAudio(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+    private fun handleMemberCountChange(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
         if (data["userId"] as String? == null || data["callId"] as String? == null) {
             logger.warn("Missing fields!")
             return
@@ -146,64 +133,41 @@ class CallMicroservice {
         val userId = data["userId"] as String
         val callId = data["callId"] as String
 
-        groupRepository.removeFromJoinedAudio(callId, userId)
+        when (Event.valueOf(headers["EVENT"] as String)) {
+            Event.JOINED_VIDEO -> {
+                logger.info("User joined call with video.")
+                groupRepository.addToJoinedVideo(callId, userId)
+            }
+            Event.LEFT_VIDEO -> {
+                logger.info("User left call with video.")
+                groupRepository.removeFromJoinedVideo(callId, userId)
+            }
+            Event.JOINED_AUDIO -> {
+                logger.info("User joined call with audio.")
+                groupRepository.addToJoinedAudio(callId, userId)
+            }
+            Event.LEFT_AUDIO -> {
+                logger.info("User left call with audio.")
+                groupRepository.removeFromJoinedAudio(callId, userId)
+            }
+            else -> {}
+        }
 
         if (!groupRepository.isCallEmpty(callId)) {
             logger.info("Empty call!")
+            groupRepository.finishCall(callId)
+
+            val groupId = (gson.fromJson(groupRepository.getGroupIdByCallId(callId), type) as MutableMap<String, Any>)["_id"].toString()
+
+            outboxRepository.persist(
+                CallEvent(
+                    headers["EVENT"] as String,
+                    Event.CALL_FINISHED.toString(),
+                    Call(callId, groupId),
+                    ""
+                )
+            )
         }
-    }
-
-    private fun handleJoinedAudio(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
-        if (data["userId"] as String? == null || data["callId"] as String? == null) {
-            logger.warn("Missing fields!")
-            return
-        }
-
-        val userId = data["userId"] as String
-        val callId = data["callId"] as String
-
-        groupRepository.addToJoinedAudio(callId, userId)
-
-        if (!groupRepository.isCallEmpty(callId)) {
-            logger.info("Empty call!")
-        }
-    }
-
-    private fun handleLeftVideo(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
-        if (data["userId"] as String? == null || data["callId"] as String? == null) {
-            logger.warn("Missing fields!")
-            return
-        }
-
-        val userId = data["userId"] as String
-        val callId = data["callId"] as String
-
-        groupRepository.removeFromJoinedVideo(callId, userId)
-
-        if (!groupRepository.isCallEmpty(callId)) {
-            logger.info("Empty call!")
-        }
-    }
-
-    private fun handleJoinedVideo(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
-        if (data["userId"] as String? == null || data["callId"] as String? == null) {
-            logger.warn("Missing fields!")
-            return
-        }
-
-        val userId = data["userId"] as String
-        val callId = data["callId"] as String
-
-        groupRepository.addToJoinedVideo(callId, userId)
-
-        if (!groupRepository.isCallEmpty(callId)) {
-            logger.info("Empty call!")
-        }
-    }
-
-    private fun handleCallFinished(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
-        logger.info(data)
-        throw RuntimeException()
     }
 
     fun ByteArray.toHex(): String = joinToString(separator = "") { eachByte -> "%02x".format(eachByte) }

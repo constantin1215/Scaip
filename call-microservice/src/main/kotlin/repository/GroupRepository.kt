@@ -2,6 +2,7 @@ package repository
 
 import com.mongodb.client.model.Aggregates
 import entity.Group
+import exceptions.GroupNotFound
 import io.quarkus.mongodb.panache.kotlin.PanacheMongoRepository
 import jakarta.enterprise.context.ApplicationScoped
 import org.bson.Document
@@ -66,5 +67,24 @@ class GroupRepository : PanacheMongoRepository<Group> {
         val result = mongoDatabase().getCollection("Group").find(match).map { it.toJson() }.toList()
 
         return result.isEmpty()
+    }
+
+    fun finishCall(callId: String) {
+        val match : Bson = Document("calls._id", callId)
+        val update : Bson = Document("\$set", Document("calls.\$.status", "FINISHED"))
+
+        mongoDatabase().getCollection("Group").updateOne(match, update)
+    }
+
+    fun getGroupIdByCallId(callId: String) : String {
+        val match : Bson = Document("\$match", Document("calls._id", callId))
+        val project : Bson = Document("\$project", Document("_id", 1))
+
+        val list = mongoDatabase().getCollection("Group").aggregate(listOf(match, project)).map { it.toJson() }.toList()
+
+        if (list.isEmpty())
+            throw GroupNotFound("Unknown", "JOIN/LEAVE AUDIO/VIDEO")
+
+        return list[0]
     }
 }

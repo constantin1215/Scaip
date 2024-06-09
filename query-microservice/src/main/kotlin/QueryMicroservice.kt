@@ -39,7 +39,8 @@ class QueryMicroservice {
         NEW_CALL_SUCCESS,
         FETCH_GROUP_MEMBERS,
         FETCH_GROUP,
-        FETCH_CALLS
+        FETCH_CALLS,
+        CALL_FINISHED
     }
 
     private val gson = Gson()
@@ -123,6 +124,10 @@ class QueryMicroservice {
                     logger.info("Fetch group calls.")
                     handleCallsFetching(data, headers)
                 }
+                Event.CALL_FINISHED -> {
+                    logger.info("Updating call status.")
+                    handleCallFinished(data, headers)
+                }
                 else -> { println("TO DO() handle ${headers["EVENT"] as String}") }
             }
         } catch (ex : EntityAlreadyInCollection) {
@@ -138,9 +143,16 @@ class QueryMicroservice {
         }
     }
 
-    private fun handleCallsFetching(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
-        logger.info(data)
+    private fun handleCallFinished(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
+        if((data["groupId"] as String?) == null || (data["_id"] as String?) == null)
+            return
 
+        groupRepository.finishCall(data["_id"] as String)
+
+        logger.info("Call finished!")
+    }
+
+    private fun handleCallsFetching(data: MutableMap<String, Any>, headers: MutableMap<String, String>) {
         if((data["groupId"] as String?) == null)
             return
 
@@ -235,7 +247,7 @@ class QueryMicroservice {
         if((data["groupId"] as String?) == null)
             return
 
-        val group = groupRepository.findById(data["groupId"] as String)
+        groupRepository.findById(data["groupId"] as String)
             ?: throw GroupNotFound(data["groupId"] as String, headers["EVENT"] as String)
 
         val timestamp = (data["timestamp"] as MutableMap<String, String>)["\$numberLong"]!!.toLong()

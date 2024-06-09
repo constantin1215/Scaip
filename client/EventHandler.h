@@ -38,6 +38,7 @@ private:
     void handleMemberRemoval(QJsonObject eventData);
     void handleFetchedGroup(QJsonObject eventData);
     void handleFetchedCalls(QJsonObject eventData);
+    void handleFinishedCall(QJsonObject eventData);
 };
 
 #endif // EVENTHANDLER_H
