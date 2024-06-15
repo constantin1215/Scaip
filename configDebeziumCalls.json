@@ -1,0 +1,16 @@
+{
+  "name": "calls-connector",  
+  "config": {
+    "connector.class": "io.debezium.connector.mongodb.MongoDbConnector", 
+    "tasks.max": "1",
+    "mongodb.connection.string" : "mongodb://mongodb-calls:27017/?directConnection=true&serverSelectionTimeoutMS=2000&replicaSet=dbrs",
+    "mongodb.user": "costi",
+    "mongodb.password": "pass",
+    "topic.prefix" : "calls-microservice",
+    "tombstones.on.delete" : "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": false,
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": false
+  }
+}

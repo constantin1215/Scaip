@@ -1,0 +1,19 @@
+{
+  "name": "users-connector",  
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector", 
+    "database.hostname": "postgres-users", 
+    "database.port": "5432", 
+    "database.user": "costi", 
+    "database.password": "password", 
+    "database.dbname" : "app-users", 
+    "topic.prefix": "users-microservice", 
+    "table.include.list": "public.Outbox",
+    "plugin.name": "pgoutput",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": false,
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": false,
+    "tombstones.on.delete" : "false"
+  }
+}
