@@ -3,7 +3,7 @@
 
 #include <qdatetime.h>
 
-MessageWidget::MessageWidget(QWidget *parent, QString id, QString userId, QString content, qint64 timestamp)
+MessageWidget::MessageWidget(QWidget *parent, QString id, QString userId, QString content, qint64 timestamp, QString username)
     : QWidget(parent)
     , ui(new Ui::MessageWidget)
 {
@@ -16,7 +16,7 @@ MessageWidget::MessageWidget(QWidget *parent, QString id, QString userId, QStrin
             content.insert((i + 1) * 100, '\n');
 
     ui->contentLabel->setText(content);
-    ui->usernameLabel->setText(userId);
+    ui->usernameLabel->setText(username);
 
     quint64 secondsSinceMsg = timestamp/1000;
     QString format = calculateTimeFormat(secondsSinceMsg);

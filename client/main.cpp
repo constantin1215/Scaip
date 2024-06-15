@@ -44,10 +44,10 @@ int main(int argc, char *argv[])
     EventHandler::connect(&eventHandler, &EventHandler::fetchProfile, &client, &WSClient::onFetchProfile);
     EventHandler::connect(&eventHandler, &EventHandler::updateUI, &w, &MainWindow::handleUpdateUI);
     EventHandler::connect(&eventHandler, &EventHandler::updateSearchResult, &w, &MainWindow::triggerPassSearchResultDialog);
-    EventHandler::connect(&eventHandler, &EventHandler::updateMembersList, &w, &MainWindow::triggerPassToMembersDialog);
     EventHandler::connect(&w, &MainWindow::fetchMessages, &client, &WSClient::onFetchMessages);
     EventHandler::connect(&w, &MainWindow::fetchGroup, &client, &WSClient::onFetchGroup);
     EventHandler::connect(&w, &MainWindow::fetchCalls, &client, &WSClient::onFetchCalls);
+    EventHandler::connect(&w, &MainWindow::fetchMembers, &client, &WSClient::onFetchMembers);
     w.show();
 
     return a.exec();

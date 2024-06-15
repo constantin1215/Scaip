@@ -8,6 +8,7 @@ import jakarta.inject.Inject
 import jakarta.transaction.Transactional
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.header.internals.RecordHeaders
+import org.bson.Document
 import org.eclipse.microprofile.reactive.messaging.Channel
 import org.eclipse.microprofile.reactive.messaging.Emitter
 import org.eclipse.microprofile.reactive.messaging.Incoming
@@ -252,9 +253,11 @@ class QueryMicroservice {
 
         val timestamp = (data["timestamp"] as MutableMap<String, String>)["\$numberLong"]!!.toLong()
 
+        val user = Document(mapOf("_id" to (data["user"] as MutableMap<String, String>)["_id"].toString(), "username" to (data["user"] as MutableMap<String, String>)["username"].toString()))
+
         val message = entity.Message(
             data["_id"] as String,
-            data["userId"] as String,
+            user,
             data["content"] as String,
             data["groupId"] as String,
             timestamp

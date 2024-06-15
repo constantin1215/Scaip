@@ -23,11 +23,17 @@
     #include <QPermission>
 #endif
 
-CallWindow::CallWindow(QWidget *parent, QJsonObject* eventData)
+CallWindow::CallWindow(QWidget *parent, QJsonObject* eventData, QList<QJsonObject> members)
     : QDialog(parent)
     , ui(new Ui::CallWindow)
 {
     ui->setupUi(this);
+
+    this->groupId = eventData->value("_id").toString();
+
+    for (int i = 0; i < members.count(); ++i) {
+        this->membersData[members.at(i)["_id"].toString()] = members.at(i)["username"].toString();
+    }
 
     setWindowFlags(Qt::Window
                    | Qt::WindowMinimizeButtonHint
@@ -67,6 +73,8 @@ CallWindow::CallWindow(QWidget *parent, QJsonObject* eventData)
 
     initAudioInput(defaultAudioInputDevice);
     initAudioOutput();
+
+    session->audioInput()->isMuted() ? ui->audioToggleButton->setText("Mute") : ui->audioToggleButton->setText("Unmute");
 }
 
 void CallWindow::initVideoClient(QString channel, QString id)
@@ -263,9 +271,24 @@ CallWindow::~CallWindow()
     delete ui;
 }
 
+QString CallWindow::getGroupId()
+{
+    return this->groupId;
+}
+
+void CallWindow::updateMembersData(QList<QJsonObject> members)
+{
+    qDebug() << "hello bitches";
+    qDebug() << members;
+}
+
 void CallWindow::onNewVideoWidget(QString username)
 {
     VideoMemberWidget* videoMemberWidget = new VideoMemberWidget(this, username, nullptr, VideoType::EXTERN);
+
+    if (this->membersData[username] != "") {
+        videoMemberWidget->updateUsername(this->membersData[username]);
+    }
 
     ui->videoGridLayout->addWidget(videoMemberWidget);
 
@@ -276,6 +299,10 @@ void CallWindow::onNewVideoWidgets(QJsonArray members)
 {
     for(int i = 0;i < members.count(); i++) {
         VideoMemberWidget* videoMemberWidget = new VideoMemberWidget(this, members.at(i).toString(), nullptr, VideoType::EXTERN);
+
+        if (this->membersData[members.at(i).toString()] != "") {
+            videoMemberWidget->updateUsername(this->membersData[members.at(i).toString()]);
+        }
 
         ui->videoGridLayout->addWidget(videoMemberWidget);
 
@@ -378,4 +405,5 @@ void CallWindow::handleAudioState(QAudio::State newState)
 void CallWindow::on_audioToggleButton_clicked()
 {
     session->audioInput()->setMuted(!session->audioInput()->isMuted());
+    session->audioInput()->isMuted() ? ui->audioToggleButton->setText("Mute") : ui->audioToggleButton->setText("Unmute");
 }

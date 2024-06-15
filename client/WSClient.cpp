@@ -10,7 +10,8 @@ enum class Events {
     FETCH_PROFILE,
     FETCH_MESSAGES,
     FETCH_GROUP,
-    FETCH_CALLS
+    FETCH_CALLS,
+    FETCH_GROUP_MEMBERS
 };
 
 QString eventToString(Events event) {
@@ -23,6 +24,8 @@ QString eventToString(Events event) {
         return "FETCH_GROUP";
     case Events::FETCH_CALLS:
         return "FETCH_CALLS";
+    case Events::FETCH_GROUP_MEMBERS:
+        return "FETCH_GROUP_MEMBERS";
     }
 }
 
@@ -104,6 +107,18 @@ void WSClient::onFetchCalls(QString groupId)
     QJsonObject event;
 
     event.insert("EVENT", eventToString(Events::FETCH_CALLS));
+    event.insert("groupId", groupId);
+    event.insert("JWT", UserData::getInstance()->getJWT());
+
+    QJsonDocument json(event);
+
+    this->sendEvent(QString::fromUtf8(json.toJson(QJsonDocument::Indented)));
+}
+
+void WSClient::onFetchMembers(QString groupId)
+{
+    QJsonObject event;
+    event.insert("EVENT", eventToString(Events::FETCH_GROUP_MEMBERS));
     event.insert("groupId", groupId);
     event.insert("JWT", UserData::getInstance()->getJWT());
 

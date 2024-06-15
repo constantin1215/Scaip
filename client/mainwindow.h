@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include "UI_UpdateTypes.h"
+#include "callwindow.h"
 #include "qlistwidget.h"
 #include <QMainWindow>
 #include <WSClient.h>
@@ -37,17 +38,19 @@ public:
     void handleMemberRemoval(QJsonObject eventData);
     void handleFetchedCalls(QJsonObject eventData);
     void handleFinishedCall(QJsonObject eventData);
+    void handleFetchedMembers(QJsonObject eventData);
 
 Q_SIGNALS:
     void fetchMessages(QString groupId, qint64 timestamp);
     void fetchGroup(QString groupId);
     void fetchCalls(QString groupId);
+    void fetchMembers(QString groupId);
     void updateMembersList(QJsonObject eventData);
+    void updateCallMembersData(QList<QJsonObject> members);
 public Q_SLOTS:
     void handleUpdateUI(UI_UpdateType type, QJsonObject eventData);
     void sendEvent(QJsonDocument eventData);
     void triggerPassSearchResultDialog(QJsonObject eventData);
-    void triggerPassToMembersDialog(QJsonObject eventData);
 
 private slots:
     void on_loginButton_clicked();
@@ -88,6 +91,8 @@ private:
     WSClient *client;
     QMovie *loadingGif = new QMovie(":/gifs/loading.gif");
     QPixmap *logo = new QPixmap(":/images/logo-black.png");
+
+    //CallWindow* callWindow = nullptr;
 
     QString selectedGroupId;
     QString selectedGroupOwnerId;

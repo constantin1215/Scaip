@@ -7,14 +7,17 @@ import org.bson.codecs.pojo.annotations.BsonId
 class User() {
     @BsonId
     lateinit var id : String
+    lateinit var username : String
 
     constructor(
         id : String,
+        username : String
     ) : this() {
         this.id = id
+        this.username = username
     }
 
     override fun toString(): String {
-        return "User(id='$id')"
+        return "User(id='$id', username='$username')"
     }
 }

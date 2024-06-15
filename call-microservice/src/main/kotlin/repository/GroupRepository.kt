@@ -17,8 +17,14 @@ class GroupRepository : PanacheMongoRepository<Group> {
         val match : Bson = Document("\$match", Document("_id", groupId))
         val project1 : Bson = Document("\$project", Document("calls", 1))
         val unwind : Bson = Document("\$unwind", "\$calls")
-        val match2 : Bson = Document("\$match", Document("calls._id", callId))
-        val project2 : Bson = Document("\$project", Document(mapOf("channel" to "\$calls.channel", "callId" to "\$calls._id")))
+        val match2 : Bson = Document("\$match", Document(mapOf("calls._id" to callId, "calls.status" to Document("\$ne", "FINISHED"))))
+        val project2 : Bson = Document("\$project", Document(mapOf(
+            "channel" to "\$calls.channel",
+            "callId" to "\$calls._id",
+            "status" to "\$calls.status",
+            "type" to "\$calls.type",
+            "scheduledTime" to "\$calls.scheduledTime"
+        )))
 
         val list = mongoDatabase().getCollection("Group").aggregate(listOf(match, project1, unwind, match2, project2)).map { it.toJson() }.toList()
 

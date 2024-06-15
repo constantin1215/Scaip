@@ -40,3 +40,9 @@ void VideoMemberWidget::updateFrame(QByteArray frameData)
             videoMock->setPixmap(pixmap.scaled(videoMock->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
     }
 }
+
+void VideoMemberWidget::updateUsername(QString username)
+{
+    this->userId = ui->usernameLabel->text();
+    ui->usernameLabel->setText(username);
+}

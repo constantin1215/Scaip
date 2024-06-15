@@ -180,10 +180,18 @@ class CallMicroservice {
         if (userId !in group.members)
             throw Unauthorized("The user $userId is not in this group", headers["EVENT"] as String)
 
-        val channelJson = groupRepository.fetchCallChannel(group.id, data["callId"] as String)
+        var resultJson = groupRepository.fetchCallChannel(group.id, data["callId"] as String)
+
+        val fields = gson.fromJson(resultJson, type) as MutableMap<String, Any>
+
+        if (fields["type"] as String? == "SCHEDULED" && (Instant.now().toEpochMilli() / 1000 < (fields["scheduledTime"] as Double).toLong())) {
+            logger.warn("Someone tried to join call before scheduled time!")
+            fields["channel"] = ""
+            resultJson = gson.toJson(fields)
+        }
 
         val newMsg = Message
-            .of(channelJson)
+            .of(resultJson)
             .addMetadata(
                 OutgoingKafkaRecordMetadata.builder<String>()
                     .withHeaders(createHeaders(headers)).build()

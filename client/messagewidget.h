@@ -12,7 +12,7 @@ class MessageWidget : public QWidget
     Q_OBJECT
 
 public:
-    explicit MessageWidget(QWidget *parent = nullptr, QString id = "", QString userId = "", QString content = "", qint64 timestamp = 0);
+    explicit MessageWidget(QWidget *parent = nullptr, QString id = "", QString userId = "", QString content = "", qint64 timestamp = 0, QString username = "");
     ~MessageWidget();
     QString id;
 private:

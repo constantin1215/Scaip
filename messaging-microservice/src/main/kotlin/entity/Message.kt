@@ -5,20 +5,20 @@ import kotlin.properties.Delegates
 
 class Message() {
     val id : String = UUID.randomUUID().toString()
-    lateinit var userId : String
+    lateinit var user : User
     lateinit var content : String
     var groupId : String? = null
     var timestamp by Delegates.notNull<Long>()
 
     constructor(
-        userId : String,
+        user : User,
         content : String
     ) : this() {
-        this.userId = userId
+        this.user = user
         this.content = content
         this.timestamp = System.currentTimeMillis()
     }
     override fun toString(): String {
-        return "Message(id='$id', userId='$userId', content='$content', timestamp=$timestamp)"
+        return "Message(id='$id', user='$user', content='$content', timestamp=$timestamp)"
     }
 }

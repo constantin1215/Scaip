@@ -129,7 +129,9 @@ class MessagingMicroservice {
         if (userId !in group.members)
             throw Unauthorized("The user $userId is not in this group", headers["EVENT"] as String)
 
-        val newMessage = Message(userId, data["content"] as String)
+        val user = userRepository.findById(userId) ?: throw UserNotFound(userId, headers["EVENT"] as String)
+
+        val newMessage = Message(user, data["content"] as String)
         group.lastMessage = newMessage
         group.messages.add(newMessage)
 
@@ -203,7 +205,7 @@ class MessagingMicroservice {
             throw EntityAlreadyInCollection(data["id"] as String)
 
         userRepository.persist(
-            User(data["id"] as String)
+            User(data["id"] as String, data["username"] as String)
         )
 
         logger.info("User added successfully.")
@@ -225,6 +227,6 @@ class MessagingMicroservice {
         return Pair(group, membersId)
     }
     private fun isNecessaryData(data: MutableMap<String, Any>): Boolean {
-        return data["id"] != null
+        return data["id"] != null && data["username"] != null
     }
 }

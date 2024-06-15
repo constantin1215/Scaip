@@ -17,6 +17,7 @@ public Q_SLOTS:
     void onFetchMessages(QString groupId, qint64 timestamp);
     void onFetchGroup(QString groupId);
     void onFetchCalls(QString groupId);
+    void onFetchMembers(QString groupId);
 
 private Q_SLOTS:
     void onConnected();

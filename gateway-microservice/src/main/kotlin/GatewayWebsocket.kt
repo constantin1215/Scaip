@@ -128,7 +128,7 @@ class GatewayWebsocket {
 
     @OnMessage
     fun onMessage(session: Session?, message: String?) {
-        checkExpiredSession(session)
+        //checkExpiredSession(session)
         if(message.isNullOrBlank()) {
             logger.warn("Received empty or null message.")
             return

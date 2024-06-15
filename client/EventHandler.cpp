@@ -220,7 +220,7 @@ void EventHandler::handleFetchedMembers(QJsonObject eventData)
 {
     qDebug() << "Handling FETCH_GROUP_MEMBERS\n";
 
-    emit updateMembersList(eventData);
+    emit updateUI(UI_UpdateType::MEMBERS_FETCHED, eventData);
 }
 
 void EventHandler::handleNewMembers(QJsonObject eventData)

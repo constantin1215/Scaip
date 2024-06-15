@@ -25,10 +25,13 @@ public:
                                VideoType type = VideoType::SELF);
     ~VideoMemberWidget();
     void updateFrame(QByteArray frameData);
+    void updateUsername(QString username);
 
 private:
     Ui::VideoMemberWidget *ui;
     QLabel* videoMock = nullptr;
+
+    QString userId;
 };
 
 #endif // VIDEOMEMBERWIDGET_H

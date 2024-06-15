@@ -23,8 +23,10 @@ class CallWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit CallWindow(QWidget *parent = nullptr, QJsonObject* eventData = nullptr);
+    explicit CallWindow(QWidget *parent = nullptr, QJsonObject* eventData = nullptr, QList<QJsonObject> members = QList<QJsonObject>());
     ~CallWindow();
+
+    QString getGroupId();
 
 public Q_SLOTS:
     void onNewVideoWidget(QString username);
@@ -32,6 +34,7 @@ public Q_SLOTS:
     void onRemovingVideoWidget(QString username);
     void onUpdateFrame(QString userId, QByteArray frameData);
     void onUpdateAudio(QString userId, QByteArray audioData);
+    void updateMembersData(QList<QJsonObject> members);
 
 private slots:
     void on_toggleVideoButton_clicked();
@@ -60,6 +63,9 @@ private:
     QByteArray userIdBin;
 
     QPixmap *logo = new QPixmap(":/images/camera-off.png");
+
+    QMap<QString, QString> membersData;
+    QString groupId;
 
     void initVideoClient(QString channel, QString id);
     void initCamera();
