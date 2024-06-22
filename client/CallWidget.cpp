@@ -32,11 +32,15 @@ CallWidget::CallWidget(QWidget *parent,
     ui->label->hide();
     ui->labelPplCount->hide();
 
-    if (this->type == "INSTANT")
+    if (this->type == "INSTANT") {
         ui->labelScheduleDate->hide();
+        ui->labelCallType->setPixmap(this->phone_icon->copy().scaled(16, 16, Qt::KeepAspectRatio));
+    }
 
     if (this->type == "SCHEDULED") {
-        qDebug() << this->scheduledTime << " " << QDateTime::currentSecsSinceEpoch();
+        //qDebug() << this->scheduledTime << " " << QDateTime::currentSecsSinceEpoch();
+
+        ui->labelCallType->setPixmap(this->calendar_icon->copy().scaled(16, 16, Qt::KeepAspectRatio));
 
         if (this->scheduledTime > (QDateTime::currentSecsSinceEpoch() + 3 * 3600))
             ui->joinButton->hide();

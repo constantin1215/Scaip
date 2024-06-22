@@ -146,6 +146,8 @@ class AuthMicroservice {
             }
         } catch (ex : IllegalArgumentException) {
             logger.warn("Unknown event possibly detected!")
+        } catch (ex: Exception) {
+            logger.warn("An error has occured! ${ex.message}")
         }
     }
 

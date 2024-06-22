@@ -36,6 +36,7 @@ class CallMicroservice {
         NEW_CALL_SUCCESS,
         NEW_CALL_FAIL,
         JOIN_CALL,
+        JOIN_CALL_FAIL,
         UNAUTHORIZED,
         CALL_FINISHED,
         JOINED_VIDEO,
@@ -65,52 +66,51 @@ class CallMicroservice {
     @Incoming("call_topic")
     @Transactional
     fun consume(msg: ConsumerRecord<String, String>) {
-        var data : MutableMap<String, Any>
         try {
-            data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
-        } catch (ex : Exception) {
-            return
-        }
-        val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
-        logger.info("Received msg: $headers and $data")
-
-        try {
-            when (Event.valueOf(headers["EVENT"] as String)) {
-                Event.REGISTRATION_SUCCESS -> {
-                    logger.info("Adding new user.")
-                    handleNewUser(data)
-                }
-                Event.CREATE_GROUP_SUCCESS -> {
-                    logger.info("Adding new group.")
-                    handleNewGroup(data, headers)
-                }
-                Event.ADD_MEMBERS_SUCCESS -> {
-                    logger.info("Adding new members to group.")
-                    handleAddNewMembers(data, headers)
-                }
-                Event.REMOVE_MEMBERS_SUCCESS -> {
-                    logger.info("Removing members from group.")
-                    handleMemberRemoval(data, headers)
-                }
-                Event.NEW_CALL -> {
-                    logger.info("Initiating new call.")
-                    handleNewCall(data, headers)
-                }
-                Event.JOIN_CALL -> {
-                    logger.info("User wants to join call.")
-                    handleJoinCall(data, headers)
-                }
-                Event.JOINED_VIDEO,
-                Event.LEFT_VIDEO,
-                Event.JOINED_AUDIO,
-                Event.LEFT_AUDIO -> {
-                    logger.info("Handling call member count change.")
-                    handleMemberCountChange(data, headers)
-                }
-                else -> {
-                    println("TO DO() handle ${headers["EVENT"] as String}")
-                }
+            var data : MutableMap<String, Any>
+            try {
+                data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
+            } catch (ex : Exception) {
+                return
             }
+            val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
+            logger.info("Received msg: $headers and $data")
+                when (Event.valueOf(headers["EVENT"] as String)) {
+                    Event.REGISTRATION_SUCCESS -> {
+                        logger.info("Adding new user.")
+                        handleNewUser(data)
+                    }
+                    Event.CREATE_GROUP_SUCCESS -> {
+                        logger.info("Adding new group.")
+                        handleNewGroup(data, headers)
+                    }
+                    Event.ADD_MEMBERS_SUCCESS -> {
+                        logger.info("Adding new members to group.")
+                        handleAddNewMembers(data, headers)
+                    }
+                    Event.REMOVE_MEMBERS_SUCCESS -> {
+                        logger.info("Removing members from group.")
+                        handleMemberRemoval(data, headers)
+                    }
+                    Event.NEW_CALL -> {
+                        logger.info("Initiating new call.")
+                        handleNewCall(data, headers)
+                    }
+                    Event.JOIN_CALL -> {
+                        logger.info("User wants to join call.")
+                        handleJoinCall(data, headers)
+                    }
+                    Event.JOINED_VIDEO,
+                    Event.LEFT_VIDEO,
+                    Event.JOINED_AUDIO,
+                    Event.LEFT_AUDIO -> {
+                        logger.info("Handling call member count change.")
+                        handleMemberCountChange(data, headers)
+                    }
+                    else -> {
+                        println("TO DO() handle ${headers["EVENT"] as String}")
+                    }
+                }
         } catch (ex : EntityAlreadyInCollection) {
             logger.warn("Entity with ID: ${ex.entityId} already in collection")
         } catch (ex : NecessaryDataMissing) {
@@ -121,6 +121,16 @@ class CallMicroservice {
             logger.warn("Group with ID: ${ex.groupId} not found while handling EVENT: ${ex.event}")
         } catch (ex : Unauthorized) {
             logger.warn(ex.message)
+        } catch (ex : Exception) {
+            logger.warn("An error has occured!")
+        }
+    }
+
+    private fun getFailedEvent(event : String) : Event {
+        return when(Event.valueOf(event)) {
+            Event.NEW_CALL -> Event.NEW_CALL_FAIL
+            Event.JOIN_CALL -> Event.JOIN_CALL_FAIL
+            else -> throw RuntimeException("Unknown event")
         }
     }
 

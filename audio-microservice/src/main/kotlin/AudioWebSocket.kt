@@ -199,11 +199,15 @@ class AudioWebSocket {
 
     @Incoming("audio_call_topic")
     fun consume(msg: ConsumerRecord<String, String>) {
-        val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
-        val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
-        logger.info("Received msg: $headers and ${msg.value()}")
+        try {
+            val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
+            val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
+            logger.info("Received msg: $headers and ${msg.value()}")
 
-        handleEvent(headers, data)
+            handleEvent(headers, data)
+        } catch (ex: Exception) {
+            logger.warn("An exception has occured! ${ex.message}")
+        }
     }
 
     private fun handleEvent(headers: MutableMap<String, String>, data: MutableMap<String, Any>) {

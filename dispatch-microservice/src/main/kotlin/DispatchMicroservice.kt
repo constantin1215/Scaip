@@ -42,6 +42,7 @@ class DispatchMicroservice {
         NEW_CALL_SUCCESS,
         NEW_CALL_FAIL,
         JOIN_CALL,
+        JOIN_CALL_FAIL,
         FETCH_GROUP_MEMBERS,
         FETCH_GROUP,
         FETCH_CALLS,
@@ -129,6 +130,8 @@ class DispatchMicroservice {
 
                 else -> println("TO DO()")
             }
+        } catch (ex: Exception) {
+            logger.warn("An exception has occured while consuming from dispatch_topic! ${ex.message}")
         } catch (ex : Throwable) {
             println(ex.message)
             println(msg.value())
@@ -138,130 +141,156 @@ class DispatchMicroservice {
 
     @Incoming("users-microservice.public.Outbox")
     fun consumeUserOutbox(msg: ConsumerRecord<String, String>) {
-        val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
-        logger.info("Consume event from users-microservice Outbox\n $data")
+        try {
+            val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
+            logger.info("Consume event from users-microservice Outbox\n $data")
 
-        val parsedData = parseData(data)
+            val parsedData = parseData(data)
 
-        val event = parsedData["generatedevent"]
-        val details = parsedData["details"]
-        val payload = parsedData["data"]
-        val sessionId = parsedData["sessionid"]!!
+            val event = parsedData["generatedevent"]
+            val details = parsedData["details"]
+            val payload = parsedData["data"]
+            val sessionId = parsedData["sessionid"]!!
 
-        val newHeaders = createHeaders(sessionId, event!!)
+            val newHeaders = createHeaders(sessionId, event!!)
 
-        when(Event.valueOf(event)) {
-            Event.REGISTRATION_FAIL, Event.UPDATE_USER_FAIL -> {
-                logger.info("Failed event response from users-microservice.")
-                notifyOfFailedEvent(details, newHeaders)
+            when (Event.valueOf(event)) {
+                Event.REGISTRATION_FAIL, Event.UPDATE_USER_FAIL -> {
+                    logger.info("Failed event response from users-microservice.")
+                    notifyOfFailedEvent(details, newHeaders)
+                }
+
+                Event.REGISTRATION_SUCCESS -> {
+                    logger.info("Successful registration event from users-microservice.")
+                    notifyOfSuccessfulEvent(
+                        payload,
+                        newHeaders,
+                        authMs = true,
+                        gatewayMs = true,
+                        messageMs = true,
+                        queryMs = true,
+                        groupMs = true,
+                        callMs = true
+                    )
+                }
+
+                Event.UPDATE_USER_SUCCESS -> {
+                    logger.info("Successful update event from users-microservice.")
+                    notifyOfSuccessfulEvent(
+                        payload,
+                        newHeaders,
+                        authMs = true,
+                        gatewayMs = true,
+                        queryMs = true
+                    )
+                }
+
+                else -> println("TO DO() handle event $event")
             }
-            Event.REGISTRATION_SUCCESS -> {
-                logger.info("Successful registration event from users-microservice.")
-                notifyOfSuccessfulEvent(
-                    payload,
-                    newHeaders,
-                    authMs = true,
-                    gatewayMs = true,
-                    messageMs = true,
-                    queryMs = true,
-                    groupMs = true,
-                    callMs = true
-                )
-            }
-            Event.UPDATE_USER_SUCCESS -> {
-                logger.info("Successful update event from users-microservice.")
-                notifyOfSuccessfulEvent(
-                    payload,
-                    newHeaders,
-                    authMs = true,
-                    gatewayMs = true,
-                    queryMs = true
-                )
-            }
-            else -> println("TO DO() handle event $event")
+        } catch (ex: Exception) {
+            logger.warn("An exception has occured while consuming from Users Outbox! ${ex.message}")
         }
     }
 
     @Incoming("groups-microservice.public.Outbox")
     fun consumeGroupOutbox(msg: ConsumerRecord<String, String>) {
-        val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
-        logger.info("Consume event from groups-microservice Outbox\n $data")
+        try {
+            val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
+            logger.info("Consume event from groups-microservice Outbox\n $data")
 
-        val parsedData = parseData(data)
+            val parsedData = parseData(data)
 
-        val event = parsedData["generatedevent"]
-        val details = parsedData["details"]
-        val payload = parsedData["data"]
-        val sessionId = parsedData["sessionid"]
+            val event = parsedData["generatedevent"]
+            val details = parsedData["details"]
+            val payload = parsedData["data"]
+            val sessionId = parsedData["sessionid"]
 
-        val newHeaders = createHeaders(sessionId!!, event!!)
+            val newHeaders = createHeaders(sessionId!!, event!!)
 
-        when (Event.valueOf(event)) {
-            Event.CREATE_GROUP_FAIL,
-            Event.UPDATE_GROUP_FAIL,
-            Event.ADD_MEMBERS_FAIL,
-            Event.REMOVE_MEMBERS_FAIL -> {
-                logger.info("Failed action response from groups-microservice.")
-                notifyOfFailedEvent(details, newHeaders)
+            when (Event.valueOf(event)) {
+                Event.CREATE_GROUP_FAIL,
+                Event.UPDATE_GROUP_FAIL,
+                Event.ADD_MEMBERS_FAIL,
+                Event.REMOVE_MEMBERS_FAIL -> {
+                    logger.info("Failed action response from groups-microservice.")
+                    notifyOfFailedEvent(details, newHeaders)
+                }
+
+                Event.CREATE_GROUP_SUCCESS,
+                Event.UPDATE_GROUP_SUCCESS,
+                Event.ADD_MEMBERS_SUCCESS,
+                Event.REMOVE_MEMBERS_SUCCESS -> {
+                    notifyOfSuccessfulEvent(
+                        payload,
+                        newHeaders,
+                        gatewayMs = true,
+                        queryMs = true,
+                        messageMs = true,
+                        callMs = true,
+                        videoMs = true,
+                        audioMs = true
+                    )
+                }
+
+                else -> println("TO DO() handle event $event")
             }
-            Event.CREATE_GROUP_SUCCESS,
-            Event.UPDATE_GROUP_SUCCESS,
-            Event.ADD_MEMBERS_SUCCESS,
-            Event.REMOVE_MEMBERS_SUCCESS -> {
-                notifyOfSuccessfulEvent(
-                    payload,
-                    newHeaders,
-                    gatewayMs = true,
-                    queryMs = true,
-                    messageMs = true,
-                    callMs = true,
-                    videoMs = true,
-                    audioMs = true
-                )
-            }
-            else -> println("TO DO() handle event $event")
+        } catch (ex : Exception) {
+            logger.warn("An exception has occured while consuming from Groups Outbox! ${ex.message}")
         }
     }
 
     @Incoming("messages-microservice.messages.Outbox")
     fun consumeMessagesOutbox(msg: ConsumerRecord<String, String>) {
-        logger.info("Consume event from groups-microservice Outbox")
+        try {
 
-        val (event, details, payload, sessionId) = extractData(msg);
-        val newHeaders = createHeaders(sessionId, event)
+            logger.info("Consume event from groups-microservice Outbox")
 
-        when(Event.valueOf(event)) {
-            Event.NEW_MESSAGE_FAIL -> notifyOfFailedEvent(details, newHeaders)
-            Event.NEW_MESSAGE_SUCCESS -> notifyOfSuccessfulEvent(
-                payload,
-                newHeaders,
-                gatewayMs = true,
-                queryMs = true
-            )
-            else -> println("TO DO() handle event $event")
+            val (event, details, payload, sessionId) = extractData(msg);
+            val newHeaders = createHeaders(sessionId, event)
+
+            when (Event.valueOf(event)) {
+                Event.NEW_MESSAGE_FAIL -> notifyOfFailedEvent(details, newHeaders)
+                Event.NEW_MESSAGE_SUCCESS -> notifyOfSuccessfulEvent(
+                    payload,
+                    newHeaders,
+                    gatewayMs = true,
+                    queryMs = true
+                )
+
+                else -> println("TO DO() handle event $event")
+            }
+        } catch (ex : Exception) {
+            logger.warn("An exception has occured while consuming from Messaging Outbox! ${ex.message}")
         }
     }
 
     @Incoming("calls-microservice.calls.Outbox")
     fun consumeCallsOutbox(msg: ConsumerRecord<String, String>) {
-        logger.info("Consume event from groups-microservice Outbox")
+        try {
+            logger.info("Consume event from groups-microservice Outbox")
 
-        val (event, details, payload, sessionId) = extractData(msg);
+            val (event, details, payload, sessionId) = extractData(msg);
 
-        val newHeaders = createHeaders(sessionId, event)
+            val newHeaders = createHeaders(sessionId, event)
 
-        when(Event.valueOf(event)) {
-            Event.NEW_CALL_FAIL -> notifyOfFailedEvent(details, newHeaders)
-            Event.CALL_FINISHED,
-            Event.NEW_CALL_SUCCESS -> notifyOfSuccessfulEvent(
-                payload,
-                newHeaders,
-                gatewayMs = true,
-                queryMs = true,
-                videoMs = true,
-                audioMs = true
-            )
-            else -> println("TO DO() handle event $event")
+            when (Event.valueOf(event)) {
+                Event.NEW_CALL_FAIL,
+                Event.JOIN_CALL_FAIL -> notifyOfFailedEvent(details, newHeaders)
+
+                Event.CALL_FINISHED,
+                Event.NEW_CALL_SUCCESS -> notifyOfSuccessfulEvent(
+                    payload,
+                    newHeaders,
+                    gatewayMs = true,
+                    queryMs = true,
+                    videoMs = true,
+                    audioMs = true
+                )
+
+                else -> println("TO DO() handle event $event")
+            }
+        } catch (ex : Exception) {
+            logger.warn("An exception has occured while consuming from Calls Outbox! ${ex.message}")
         }
     }
 

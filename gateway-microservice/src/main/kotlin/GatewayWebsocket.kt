@@ -175,18 +175,22 @@ class GatewayWebsocket {
 
     @Incoming("gateway_topic")
     fun consume(msg: ConsumerRecord<String, String>) {
-        var value = msg.value()
-        if (msg.value().startsWith("[")) {
-            value = "$value}"
-            value = "{\"members\":$value"
-        }
-        logger.info(value)
-        val data = gson.fromJson(value, type) as MutableMap<String, Any>
-        val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
-        logger.info("Received msg: $headers and ${msg.value()}")
+        try {
+            var value = msg.value()
+            if (msg.value().startsWith("[")) {
+                value = "$value}"
+                value = "{\"members\":$value"
+            }
+            logger.info(value)
+            val data = gson.fromJson(value, type) as MutableMap<String, Any>
+            val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
+            logger.info("Received msg: $headers and ${msg.value()}")
 
-        val session = headers["SESSION_ID"] as String
-        handleEvent(headers, session, data, msg)
+            val session = headers["SESSION_ID"] as String
+            handleEvent(headers, session, data, msg)
+        } catch (ex: Exception) {
+            logger.info("An exception occured! ${ex.message}")
+        }
     }
 
     private fun handleEvent(

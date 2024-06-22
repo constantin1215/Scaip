@@ -41,6 +41,9 @@ private:
     QString type;
     qint64 scheduledTime;
     QTimer *timer;
+
+    QPixmap *calendar_icon = new QPixmap(":/icons/calendar.png");
+    QPixmap *phone_icon = new QPixmap(":/icons/phone.png");
 };
 
 #endif // CALLWIDGET_H

@@ -118,6 +118,8 @@ class UsersMicroservice {
                 ex.message!!,
                 headers["SESSION_ID"] as String
             ))
+        } catch (ex : Exception) {
+            logger.warn("An unknown exception has occured! ${ex.message}")
         }
     }
 

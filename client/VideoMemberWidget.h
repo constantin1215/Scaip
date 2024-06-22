@@ -1,6 +1,7 @@
 #ifndef VIDEOMEMBERWIDGET_H
 #define VIDEOMEMBERWIDGET_H
 
+#include "qboxlayout.h"
 #include <QLabel>
 #include <QVideoWidget>
 #include <QWidget>
@@ -30,6 +31,7 @@ public:
 private:
     Ui::VideoMemberWidget *ui;
     QLabel* videoMock = nullptr;
+    QHBoxLayout *horizontalLayout = nullptr;
 
     QString userId;
 };

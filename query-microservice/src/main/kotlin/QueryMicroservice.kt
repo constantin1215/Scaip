@@ -61,17 +61,18 @@ class QueryMicroservice {
     @Incoming("query_topic")
     @Transactional
     fun consume(msg: ConsumerRecord<String, String>) {
-        var value = msg.value()
-        if (msg.value().startsWith("[")) {
-            value = "$value}"
-            value = "{\"members\":$value"
-        }
-        logger.info(value)
-
-        val data = gson.fromJson(value, type) as MutableMap<String, Any>
-        val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
-        logger.info("Received msg: $headers and $data")
         try {
+            var value = msg.value()
+            if (msg.value().startsWith("[")) {
+                value = "$value}"
+                value = "{\"members\":$value"
+            }
+            logger.info(value)
+
+            val data = gson.fromJson(value, type) as MutableMap<String, Any>
+            val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
+            logger.info("Received msg: $headers and $data")
+
             when(Event.valueOf(headers["EVENT"] as String)) {
                 Event.REGISTRATION_SUCCESS -> {
                     logger.info("Adding new user.")
@@ -141,6 +142,8 @@ class QueryMicroservice {
             logger.warn("User with ID: ${ex.groupId} not found while handling EVENT: ${ex.event}")
         } catch (ex : IllegalArgumentException) {
             logger.warn("Unknown event possibly detected!")
+        } catch (ex : Exception) {
+            logger.warn("An exception has occured! ${ex.message}")
         }
     }
 

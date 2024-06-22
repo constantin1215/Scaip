@@ -54,38 +54,37 @@ class MessagingMicroservice {
     @Incoming("message_topic")
     @Transactional
     fun consume(msg: ConsumerRecord<String, String>) {
-        val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
-        val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
-        logger.info("Received msg: $headers and $data")
-
         try {
-            when(Event.valueOf(headers["EVENT"] as String)) {
-                Event.REGISTRATION_SUCCESS -> {
-                    logger.info("Adding new user.")
-                    handleNewUser(data)
+            val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
+            val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
+            logger.info("Received msg: $headers and $data")
+                when(Event.valueOf(headers["EVENT"] as String)) {
+                    Event.REGISTRATION_SUCCESS -> {
+                        logger.info("Adding new user.")
+                        handleNewUser(data)
+                    }
+                    Event.CREATE_GROUP_SUCCESS -> {
+                        logger.info("Adding new group.")
+                        handleNewGroup(data, headers)
+                    }
+                    Event.ADD_MEMBERS_SUCCESS -> {
+                        logger.info("Adding new members to group.")
+                        handleAddNewMembers(data, headers)
+                    }
+                    Event.REMOVE_MEMBERS_SUCCESS -> {
+                        logger.info("Removing members from group.")
+                        handleMemberRemoval(data, headers)
+                    }
+                    Event.NEW_MESSAGE -> {
+                        logger.info("Adding to message to conversation.")
+                        handleNewMessage(data, headers)
+                    }
+                    Event.FETCH_MESSAGES -> {
+                        logger.info("Fetching messages from conversation.")
+                        handleMessageFetching(data, headers)
+                    }
+                    else -> { println("TO DO() handle ${headers["EVENT"] as String}") }
                 }
-                Event.CREATE_GROUP_SUCCESS -> {
-                    logger.info("Adding new group.")
-                    handleNewGroup(data, headers)
-                }
-                Event.ADD_MEMBERS_SUCCESS -> {
-                    logger.info("Adding new members to group.")
-                    handleAddNewMembers(data, headers)
-                }
-                Event.REMOVE_MEMBERS_SUCCESS -> {
-                    logger.info("Removing members from group.")
-                    handleMemberRemoval(data, headers)
-                }
-                Event.NEW_MESSAGE -> {
-                    logger.info("Adding to message to conversation.")
-                    handleNewMessage(data, headers)
-                }
-                Event.FETCH_MESSAGES -> {
-                    logger.info("Fetching messages from conversation.")
-                    handleMessageFetching(data, headers)
-                }
-                else -> { println("TO DO() handle ${headers["EVENT"] as String}") }
-            }
         } catch (ex : EntityAlreadyInCollection) {
             logger.warn("Entity with ID: ${ex.entityId} already in collection")
         } catch (ex : NecessaryDataMissing) {
@@ -94,6 +93,8 @@ class MessagingMicroservice {
             logger.warn("User with ID: ${ex.userId} not found while handling EVENT: ${ex.event}")
         } catch (ex : GroupNotFound) {
             logger.warn("Group with ID: ${ex.groupId} not found while handling EVENT: ${ex.event}")
+        } catch (ex : Exception) {
+            logger.warn("An exception has occured! ${ex.message}")
         }
     }
 

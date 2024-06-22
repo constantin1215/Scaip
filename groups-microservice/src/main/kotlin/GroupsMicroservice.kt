@@ -55,35 +55,35 @@ class GroupsMicroservice {
     @Transactional
     fun consume(msg: ConsumerRecord<String, String>) {
         val headers = msg.headers().associate { it.key() to it.value().toString(Charsets.UTF_8) }.toMutableMap()
-        val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
-        logger.info("Received msg: $headers and $data")
-
         try {
-            when(Event.valueOf(headers["EVENT"] as String)) {
-                Event.CREATE_GROUP -> {
-                    logger.info("Creating group.")
-                    handleNewGroup(data, headers)
+            val data = gson.fromJson(msg.value(), type) as MutableMap<String, Any>
+            logger.info("Received msg: $headers and $data")
+
+                when(Event.valueOf(headers["EVENT"] as String)) {
+                    Event.CREATE_GROUP -> {
+                        logger.info("Creating group.")
+                        handleNewGroup(data, headers)
+                    }
+                    Event.UPDATE_GROUP -> {
+                        logger.info("Updating group info.")
+                        handleGroupUpdate(data, headers)
+                    }
+                    Event.ADD_MEMBERS -> {
+                        logger.info("Adding members to group.")
+                        handleNewMembers(data, headers)
+                    }
+                    Event.REMOVE_MEMBERS -> {
+                        logger.info("Removing members from group.")
+                        handleMemberRemoval(data, headers)
+                    }
+                    Event.REGISTRATION_SUCCESS -> {
+                        logger.info("Adding new user.")
+                        handleNewUser(data)
+                    }
+                    else -> {
+                        logger.info("TO DO() handle other events")
+                    }
                 }
-                Event.UPDATE_GROUP -> {
-                    logger.info("Updating group info.")
-                    handleGroupUpdate(data, headers)
-                }
-                Event.ADD_MEMBERS -> {
-                    logger.info("Adding members to group.")
-                    handleNewMembers(data, headers)
-                }
-                Event.REMOVE_MEMBERS -> {
-                    logger.info("Removing members from group.")
-                    handleMemberRemoval(data, headers)
-                }
-                Event.REGISTRATION_SUCCESS -> {
-                    logger.info("Adding new user.")
-                    handleNewUser(data)
-                }
-                else -> {
-                    logger.info("TO DO() handle other events")
-                }
-            }
         } catch (ex : EntityAlreadyInCollection) {
             logger.warn("Entity with ID: ${ex.entityId} already in collection")
         } catch (ex : NecessaryDataMissing) {
@@ -114,7 +114,7 @@ class GroupsMicroservice {
                 headers["SESSION_ID"] as String
             ))
         } catch (ex : Unauthorized) {
-            logger.warn("User ${data["userId"]} tried to perform an unauthorized action ${ex.event} on group ${data["groupId"]}")
+            logger.warn("An user tried to perform an unauthorized action ${ex.event} in a group")
             outboxRepository.persist(GroupEvent(
                 headers["EVENT"] as String,
                 Event.UNAUTHORIZED.toString(),
