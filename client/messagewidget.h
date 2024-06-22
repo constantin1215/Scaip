@@ -3,6 +3,12 @@
 
 #include <QWidget>
 
+enum class MessagesColor {
+    OWNER,
+    USER,
+    OTHER
+};
+
 namespace Ui {
 class MessageWidget;
 }
@@ -15,6 +21,9 @@ public:
     explicit MessageWidget(QWidget *parent = nullptr, QString id = "", QString userId = "", QString content = "", qint64 timestamp = 0, QString username = "");
     ~MessageWidget();
     QString id;
+
+    void changeUsernameColor(MessagesColor color);
+    void changeTextBoxColor(MessagesColor color);
 private:
     Ui::MessageWidget *ui;
 

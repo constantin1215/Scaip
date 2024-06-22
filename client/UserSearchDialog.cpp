@@ -14,6 +14,9 @@ UserSearchDialog::UserSearchDialog(QWidget *parent)
 
     ui->listChosenUsers->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->listSearchResult->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+
+    ui->buttonSearch->setCursor(Qt::PointingHandCursor);
+    ui->buttonBox->setCursor(Qt::PointingHandCursor);
 }
 
 UserSearchDialog::~UserSearchDialog()

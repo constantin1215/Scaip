@@ -41,6 +41,12 @@ UserWidget::UserWidget(QWidget *parent, QString id, QString username, QString fi
         ui->labelOwner->show();
         break;
     }
+
+    ui->kickButton->setCursor(Qt::PointingHandCursor);
+    ui->xButton->setCursor(Qt::PointingHandCursor);
+    ui->checkBox->setCursor(Qt::PointingHandCursor);
+    ui->kickButton->setStyleSheet("QPushButton { background-color: white; border: 2px solid #c61e33; border-radius: 10px; } QPushButton:hover { color: white; background-color: #c61e33;  }");
+    ui->xButton->setStyleSheet("QPushButton { background-color: white; border: 2px solid #c61e33; border-radius: 10px; } QPushButton:hover { color: white; background-color: #c61e33;  }");
 }
 
 UserWidget::~UserWidget()

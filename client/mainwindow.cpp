@@ -102,6 +102,52 @@ MainWindow::MainWindow(QWidget *parent, WSClient *client)
     ui->messagesListWidget->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->callListWidget->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     ui->groupListWidget->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+
+    ui->updateProfileButton->hide();
+    ui->saveButton->hide();
+
+    ui->sendMessageButton->setIcon(*this->plane_icon);
+    ui->sendMessageButton->setIconSize(QSize(32, 32));
+    ui->sendMessageButton->setText("");
+
+    ui->profileButton->setIcon(*this->head_icon);
+    ui->profileButton->setIconSize(QSize(32, 32));
+    ui->profileButton->setText("");
+
+    ui->chatsButton->setIcon(*this->group_icon);
+    ui->chatsButton->setIconSize(QSize(32, 32));
+    ui->chatsButton->setText("");
+
+    ui->callButton->setIcon(*this->phone_icon);
+    ui->callButton->setIconSize(QSize(24, 24));
+    ui->callButton->setText("");
+
+    ui->scheduleButton->setIcon(*this->calendar_icon);
+    ui->scheduleButton->setIconSize(QSize(24, 24));
+    ui->scheduleButton->setText("");
+
+    ui->membersButton->setIcon(*this->members_icon);
+    ui->membersButton->setIconSize(QSize(24, 24));
+    ui->membersButton->setText("");
+
+    ui->addMembersButton->setIcon(*this->plus_icon);
+    ui->addMembersButton->setIconSize(QSize(24, 24));
+    ui->addMembersButton->setText("");
+
+    ui->sendMessageButton->setCursor(Qt::PointingHandCursor);
+    ui->addMembersButton->setCursor(Qt::PointingHandCursor);
+    ui->membersButton->setCursor(Qt::PointingHandCursor);
+    ui->backButton->setCursor(Qt::PointingHandCursor);
+    ui->backButton_2->setCursor(Qt::PointingHandCursor);
+    ui->callButton->setCursor(Qt::PointingHandCursor);
+    ui->chatsButton->setCursor(Qt::PointingHandCursor);
+    ui->createGroupButton->setCursor(Qt::PointingHandCursor);
+    ui->log_in_Button->setCursor(Qt::PointingHandCursor);
+    ui->loginButton->setCursor(Qt::PointingHandCursor);
+    ui->profileButton->setCursor(Qt::PointingHandCursor);
+    ui->registerButton->setCursor(Qt::PointingHandCursor);
+    ui->scheduleButton->setCursor(Qt::PointingHandCursor);
+    ui->register_Button->setCursor(Qt::PointingHandCursor);
 }
 
 MainWindow::~MainWindow()
@@ -213,6 +259,10 @@ void MainWindow::prependNewMessages(QJsonArray recentMessages, QString groupId)
             groupConversations[groupId].at(i)["username"].toString()
             );
 
+        if (groupConversations[groupId].at(i)["userId"].toString() == this->selectedGroupOwnerId) {
+            widget->changeUsernameColor(MessagesColor::OWNER);
+            widget->changeTextBoxColor(MessagesColor::OWNER);
+        }
 
         QListWidgetItem *item = new QListWidgetItem(ui->messagesListWidget);
 
@@ -231,6 +281,9 @@ void MainWindow::prependNewMessages(QJsonArray recentMessages, QString groupId)
         connect(loadMoreMessagesButton, &QPushButton::clicked, this, [this, groupId, recentMessages]() {
             emit fetchMessages(groupId, recentMessages.at(0).toObject()["timestamp"].toInteger());
         });
+
+        loadMoreMessagesButton->setStyleSheet("QPushButton { border: 0; border-bottom: 2px solid #1B99D4;; border-radius: 0; }");
+        loadMoreMessagesButton->setCursor(Qt::PointingHandCursor);
     }
 
     ui->messagesListWidget->scrollToTop();
@@ -266,6 +319,9 @@ void MainWindow::handleGroupChatConversationUpdate(QJsonObject eventData)
         connect(loadMoreMessagesButton, &QPushButton::clicked, this, [this, groupId, recentMessages]() {
             emit fetchMessages(groupId, recentMessages.at(0).toObject()["timestamp"].toInteger());
         });
+
+        loadMoreMessagesButton->setStyleSheet("QPushButton { border: 0; border-bottom: 2px solid #1B99D4;; border-radius: 0; }");
+        loadMoreMessagesButton->setCursor(Qt::PointingHandCursor);
     }
 
     for(int i = 0; i < recentMessages.count(); i++) {
@@ -279,6 +335,11 @@ void MainWindow::handleGroupChatConversationUpdate(QJsonObject eventData)
             messageObject["timestamp"].toInteger(),
             messageObject["user"].toObject()["username"].toString()
             );
+
+        if (messageObject["user"].toObject()["_id"].toString() == this->selectedGroupOwnerId) {
+            widget->changeUsernameColor(MessagesColor::OWNER);
+            widget->changeTextBoxColor(MessagesColor::OWNER);
+        }
 
         messageObject.insert("username", messageObject["user"].toObject()["username"].toString());
         messageObject.insert("userId", messageObject["user"].toObject()["_id"].toString());
@@ -360,6 +421,11 @@ void MainWindow::handleGroupChatNewMessage(QJsonObject eventData)
             timestamp,
             eventData["user"].toObject()["username"].toString()
             );
+
+        if (eventData["user"].toObject()["_id"].toString() == this->selectedGroupOwnerId) {
+            widget->changeUsernameColor(MessagesColor::OWNER);
+            widget->changeTextBoxColor(MessagesColor::OWNER);
+        }
 
         item->setSizeHint(widget->sizeHint());
         ui->messagesListWidget->setItemWidget(item, widget);
@@ -910,6 +976,9 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
                     connect(loadMoreMessagesButton, &QPushButton::clicked, this, [this, groupWidget, messages]() {
                         emit fetchMessages(groupWidget->getId(), messages.at(0)["timestamp"].toInteger());
                     });
+
+                    loadMoreMessagesButton->setStyleSheet("QPushButton { border: 0; border-bottom: 2px solid #1B99D4; border-radius: 0; }");
+                    loadMoreMessagesButton->setCursor(Qt::PointingHandCursor);
                 }
 
                 for (int i = 0;i < messages.count(); i++) {
@@ -923,6 +992,11 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
                         messages[i]["timestamp"].toInteger(),
                         messages[i]["username"].toString()
                         );
+
+                    if (messages[i]["userId"].toString() == this->selectedGroupOwnerId) {
+                        widget->changeUsernameColor(MessagesColor::OWNER);
+                        widget->changeTextBoxColor(MessagesColor::OWNER);
+                    }
 
                     item->setSizeHint(widget->sizeHint());
                     ui->messagesListWidget->setItemWidget(item, widget);

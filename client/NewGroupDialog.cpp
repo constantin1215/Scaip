@@ -12,6 +12,9 @@ NewGroupDialog::NewGroupDialog(QWidget *parent)
 {
     ui->setupUi(this);
     ui->messageLabel->setStyleSheet("color: #AA1111");
+
+    ui->addMemberButton->setCursor(Qt::PointingHandCursor);
+    ui->buttonBox->setCursor(Qt::PointingHandCursor);
 }
 
 NewGroupDialog::~NewGroupDialog()

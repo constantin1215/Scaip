@@ -74,7 +74,16 @@ CallWindow::CallWindow(QWidget *parent, QJsonObject* eventData, QList<QJsonObjec
     initAudioInput(defaultAudioInputDevice);
     initAudioOutput();
 
-    session->audioInput()->isMuted() ? ui->audioToggleButton->setText("Mute") : ui->audioToggleButton->setText("Unmute");
+    if (session->audioInput() != nullptr)
+        session->audioInput()->isMuted() ? ui->audioToggleButton->setText("Unmute") : ui->audioToggleButton->setText("Mute");
+
+    ui->comboBoxAudioInputs->hide();
+
+    ui->audioToggleButton->setCursor(Qt::PointingHandCursor);
+    ui->toggleVideoButton->setCursor(Qt::PointingHandCursor);
+    ui->leaveCallButton->setCursor(Qt::PointingHandCursor);
+
+    ui->leaveCallButton->setStyleSheet("QPushButton { background-color: white; border: 2px solid #c61e33; border-radius: 10px; } QPushButton:hover { color: white; background-color: #c61e33;  }");
 }
 
 void CallWindow::initVideoClient(QString channel, QString id)
@@ -83,7 +92,10 @@ void CallWindow::initVideoClient(QString channel, QString id)
     urlVideo.setScheme("ws");
     urlVideo.setHost("localhost");
     urlVideo.setPort(8081);
-    urlVideo.setPath(QString("/video/%1/%2/%3").arg(channel, id, UserData::getInstance()->getId()));
+    urlVideo.setPath(QString("/video/%1/%2/%3/%4").arg(channel,
+                                                       id,
+                                                       UserData::getInstance()->getId(),
+                                                       UserData::getInstance()->getUsername()));
 
     videoClient = new VideoWSClient(urlVideo, true, this);
 
@@ -259,7 +271,7 @@ CallWindow::~CallWindow()
         session->camera()->stop();
         delete session->camera();
     }
-    if (audioSource)
+    if (audioSource && !mockMode)
         audioSource->stop();
     if (player) {
         player->stop();
@@ -282,27 +294,23 @@ void CallWindow::updateMembersData(QList<QJsonObject> members)
     qDebug() << members;
 }
 
-void CallWindow::onNewVideoWidget(QString username)
+void CallWindow::onNewVideoWidget(QString userId, QString username)
 {
-    VideoMemberWidget* videoMemberWidget = new VideoMemberWidget(this, username, nullptr, VideoType::EXTERN);
+    VideoMemberWidget* videoMemberWidget = new VideoMemberWidget(this, userId, nullptr, VideoType::EXTERN);
 
-    if (this->membersData[username] != "") {
-        videoMemberWidget->updateUsername(this->membersData[username]);
-    }
+    videoMemberWidget->updateUsername(username);
 
     ui->videoGridLayout->addWidget(videoMemberWidget);
 
-    videoWidgets[username] = videoMemberWidget;
+    videoWidgets[userId] = videoMemberWidget;
 }
 
-void CallWindow::onNewVideoWidgets(QJsonArray members)
+void CallWindow::onNewVideoWidgets(QJsonArray members, QJsonObject usernames)
 {
     for(int i = 0;i < members.count(); i++) {
         VideoMemberWidget* videoMemberWidget = new VideoMemberWidget(this, members.at(i).toString(), nullptr, VideoType::EXTERN);
 
-        if (this->membersData[members.at(i).toString()] != "") {
-            videoMemberWidget->updateUsername(this->membersData[members.at(i).toString()]);
-        }
+        videoMemberWidget->updateUsername(usernames[members.at(i).toString()].toString());
 
         ui->videoGridLayout->addWidget(videoMemberWidget);
 
@@ -405,5 +413,5 @@ void CallWindow::handleAudioState(QAudio::State newState)
 void CallWindow::on_audioToggleButton_clicked()
 {
     session->audioInput()->setMuted(!session->audioInput()->isMuted());
-    session->audioInput()->isMuted() ? ui->audioToggleButton->setText("Mute") : ui->audioToggleButton->setText("Unmute");
+    session->audioInput()->isMuted() ? ui->audioToggleButton->setText("Unmute") : ui->audioToggleButton->setText("Mute");
 }

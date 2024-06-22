@@ -72,13 +72,16 @@ void VideoWSClient::handleJoinedVideo(QJsonObject jsonObject)
     if (!jsonObject["userId"].isNull()) {
         //qDebug() << "Adding 1 member to video";
         QString userId = jsonObject["userId"].toString();
-        emit addNewVideoWidget(userId);
+        QString username = jsonObject["username"].toString();
+        emit addNewVideoWidget(userId, username);
     }
 
     if (!jsonObject["members"].isNull()) {
-        //qDebug() << "Adding multiple members to video";
+        qDebug() << "Adding multiple members to video";
+        qDebug() << jsonObject;
         QJsonArray members = jsonObject["members"].toArray();
-        emit addNewVideoWidgets(members);
+        QJsonObject usernames = jsonObject["usernames"].toObject();
+        emit addNewVideoWidgets(members, usernames);
     }
 }
 

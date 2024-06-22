@@ -29,8 +29,8 @@ public:
     QString getGroupId();
 
 public Q_SLOTS:
-    void onNewVideoWidget(QString username);
-    void onNewVideoWidgets(QJsonArray members);
+    void onNewVideoWidget(QString userId, QString username);
+    void onNewVideoWidgets(QJsonArray members, QJsonObject usernames);
     void onRemovingVideoWidget(QString username);
     void onUpdateFrame(QString userId, QByteArray frameData);
     void onUpdateAudio(QString userId, QByteArray audioData);

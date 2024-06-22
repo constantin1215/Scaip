@@ -91,8 +91,13 @@ private:
     WSClient *client;
     QMovie *loadingGif = new QMovie(":/gifs/loading.gif");
     QPixmap *logo = new QPixmap(":/images/logo-black.png");
-
-    //CallWindow* callWindow = nullptr;
+    QPixmap *plane_icon = new QPixmap(":/icons/paper-plane.png");
+    QPixmap *head_icon = new QPixmap(":/icons/head.png");
+    QPixmap *group_icon = new QPixmap(":/icons/group.png");
+    QPixmap *calendar_icon = new QPixmap(":/icons/calendar.png");
+    QPixmap *phone_icon = new QPixmap(":/icons/phone.png");
+    QPixmap *plus_icon = new QPixmap(":/icons/plus.png");
+    QPixmap *members_icon = new QPixmap(":/icons/members.png");
 
     QString selectedGroupId;
     QString selectedGroupOwnerId;

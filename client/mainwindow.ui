@@ -87,7 +87,7 @@
    </palette>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Scaip</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -170,7 +170,7 @@
               <property name="maximumSize">
                <size>
                 <width>200</width>
-                <height>30</height>
+                <height>40</height>
                </size>
               </property>
               <property name="text">
@@ -219,7 +219,7 @@
               <property name="maximumSize">
                <size>
                 <width>200</width>
-                <height>30</height>
+                <height>40</height>
                </size>
               </property>
               <property name="text">
@@ -2172,8 +2172,14 @@
                        <widget class="QPushButton" name="sendMessageButton">
                         <property name="minimumSize">
                          <size>
-                          <width>0</width>
+                          <width>70</width>
                           <height>70</height>
+                         </size>
+                        </property>
+                        <property name="maximumSize">
+                         <size>
+                          <width>70</width>
+                          <height>16777215</height>
                          </size>
                         </property>
                         <property name="text">

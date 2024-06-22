@@ -15,8 +15,8 @@ public:
     void sendFrame(const QByteArray &data);
 Q_SIGNALS:
     void closed();
-    void addNewVideoWidget(QString username);
-    void addNewVideoWidgets(QJsonArray members);
+    void addNewVideoWidget(QString userId, QString username);
+    void addNewVideoWidgets(QJsonArray members, QJsonObject usernames);
     void removeVideoWidget(QString username);
     void updateFrame(QString userId, QByteArray frameData);
 private Q_SLOTS:

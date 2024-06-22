@@ -10,4 +10,13 @@
         <file>logo-black.png</file>
         <file>camera-off.png</file>
     </qresource>
+    <qresource prefix="/icons">
+        <file>paper-plane.png</file>
+        <file>plus.png</file>
+        <file>calendar.png</file>
+        <file>phone.png</file>
+        <file>head.png</file>
+        <file>group.png</file>
+        <file>members.png</file>
+    </qresource>
 </RCC>

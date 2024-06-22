@@ -1,5 +1,6 @@
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import io.quarkus.runtime.Startup
 import io.smallrye.reactive.messaging.kafka.api.OutgoingKafkaRecordMetadata
 import io.vertx.core.Vertx
 import jakarta.enterprise.context.ApplicationScoped
@@ -26,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 
 @ApplicationScoped
-@ServerEndpoint("/video/{channel}/{callId}/{userId}")
+@ServerEndpoint("/video/{channel}/{callId}/{userId}/{username}")
 class VideoWebSocket {
     private val gson = Gson()
     private val type = object : TypeToken<Map<String, Any>>() {}.type
@@ -34,6 +35,7 @@ class VideoWebSocket {
     var channels: MutableMap<String, MutableList<String>> = mutableMapOf()
     var consumers: MutableMap<String, Thread> = mutableMapOf()
 //    var cancelTasks: MutableMap<String, TimerTask> = mutableMapOf()
+    var usernames: MutableMap<String, String> = mutableMapOf()
 
     private val logger : Logger = Logger.getLogger(this.javaClass)
 
@@ -58,10 +60,19 @@ class VideoWebSocket {
     @Channel("call_topic")
     lateinit var callEmitter : Emitter<String>
 
+    @Startup
+    fun startup() {
+        logger.info("Cleaning up Redis.")
+        storageService.deleteKeys("SESSION:*")
+        storageService.deleteKeys("USER:*")
+        storageService.deleteKeys("CALL:*")
+    }
+
     @OnOpen
-    fun onOpen(session: Session?, @PathParam("channel") channel: String, @PathParam("callId") callId: String, @PathParam("userId") userId: String) {
-        logger.info("connection video from $userId to channel: $channel> ${session!!.id}")
+    fun onOpen(session: Session?, @PathParam("channel") channel: String, @PathParam("callId") callId: String, @PathParam("userId") userId: String, @PathParam("username") username: String) {
+        logger.info("video connection from $userId $username to channel: $channel> ${session!!.id}")
         sessions[userId] = session
+        usernames[userId] = username
 
         if (channels[channel].isNullOrEmpty()) {
             channels[channel] = mutableListOf(userId)
@@ -100,9 +111,9 @@ class VideoWebSocket {
             consumers[channel] = consumerThread
         }
 
-        multicastMessage(gson.toJson(mapOf("EVENT" to Event.JOINED_VIDEO.toString(), "userId" to userId)), session.id, channel)
+        multicastMessage(gson.toJson(mapOf("EVENT" to Event.JOINED_VIDEO.toString(), "userId" to userId, "username" to username)), session.id, channel)
         val members = sessions.keys.filter { it != userId }
-        session.asyncRemote.sendText(gson.toJson(mapOf("EVENT" to Event.JOINED_VIDEO.toString(), "members" to members)))
+        session.asyncRemote.sendText(gson.toJson(mapOf("EVENT" to Event.JOINED_VIDEO.toString(), "members" to members, "usernames" to usernames.filter { it.key != userId })))
 
         val headers = createHeaders(Event.JOINED_VIDEO)
 
@@ -123,10 +134,11 @@ class VideoWebSocket {
     }
 
     @OnClose
-    fun onClose(session: Session?, @PathParam("channel") channel: String, @PathParam("callId") callId: String, @PathParam("userId") userId: String) {
+    fun onClose(session: Session?, @PathParam("channel") channel: String, @PathParam("callId") callId: String, @PathParam("userId") userId: String, @PathParam("username") username: String) {
         logger.info("exit video from $userId to channel: $channel> ${session!!.id}")
         sessions.remove(userId)
         channels[channel]!!.remove(userId)
+        usernames.remove(userId)
 
         if (channels[channel]!!.isEmpty()) {
             channels.remove(channel)
@@ -150,14 +162,14 @@ class VideoWebSocket {
     }
 
     @OnError
-    fun onError(session: Session?, @PathParam("channel") channel: String, @PathParam("callId") callId: String, @PathParam("userId") userId: String, throwable: Throwable) {
+    fun onError(session: Session?, @PathParam("channel") channel: String, @PathParam("callId") callId: String, @PathParam("userId") userId: String, @PathParam("username") username: String, throwable: Throwable) {
         logger.info("error >")
         logger.warn(throwable.message)
         throwable.printStackTrace()
     }
 
     @OnMessage
-    fun onMessage(session: Session?, bytes: ByteBuffer, @PathParam("channel") channel: String, @PathParam("callId") callId: String, @PathParam("userId") userId: String) {
+    fun onMessage(session: Session?, bytes: ByteBuffer, @PathParam("channel") channel: String, @PathParam("callId") callId: String, @PathParam("userId") userId: String, @PathParam("username") username: String) {
         val metadata: OutgoingKafkaRecordMetadata<*> = OutgoingKafkaRecordMetadata.builder<Any>()
             .withTopic("video-$channel")
             .build()
@@ -175,7 +187,7 @@ class VideoWebSocket {
 
                 s.asyncRemote.sendText(message) { result ->
                     if (result.exception != null) {
-                        println("Unable to send message: " + result.exception)
+                        logger.warn("Unable to send message: " + result.exception)
                     }
                 }
             }
@@ -192,7 +204,7 @@ class VideoWebSocket {
 
                 s.asyncRemote.sendBinary(binary) { result ->
                     if (result.exception != null) {
-                        println("Unable to send message: " + result.exception)
+                        logger.warn("Unable to send message: " + result.exception)
                     }
                 }
             }

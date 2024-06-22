@@ -54,6 +54,8 @@ CallWidget::CallWidget(QWidget *parent,
 
         timer->start(60000);
     }
+
+    ui->joinButton->setCursor(Qt::PointingHandCursor);
 }
 
 CallWidget::~CallWidget()
