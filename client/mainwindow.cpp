@@ -492,7 +492,18 @@ void MainWindow::handleInstantCall(QJsonObject eventData)
         return;
     }
 
-    CallDialog* callDialog = new CallDialog(this);
+    QString groupTitle = "";
+    for (int i = 0;i < ui->groupListWidget->count(); i++) {
+        QListWidgetItem* item = ui->groupListWidget->item(i);
+        GroupWidget *widget = qobject_cast<GroupWidget*>(ui->groupListWidget->itemWidget(item));
+
+        if (widget->getId() == eventData["groupId"].toString()) {
+            groupTitle = widget->getGroupName();
+            break;
+        }
+    }
+
+    CallDialog* callDialog = new CallDialog(this, groupTitle);
     callDialog->exec();
 
     if(callDialog->result() == QDialog::Accepted) {

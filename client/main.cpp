@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 
     MainWindow w(nullptr, &client);
 
-    EventHandler eventHandler(w);
+    EventHandler eventHandler;
 
     EventHandler::connect(&client, &WSClient::passToHandler, &eventHandler, &EventHandler::handleEvent);
     EventHandler::connect(&eventHandler, &EventHandler::fetchProfile, &client, &WSClient::onFetchProfile);

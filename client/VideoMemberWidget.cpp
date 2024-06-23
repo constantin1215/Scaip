@@ -21,17 +21,7 @@ VideoMemberWidget::VideoMemberWidget(QWidget *parent,
     else {
         videoMock = new QLabel(this);
         videoMock->setMinimumHeight(270);
-
-        horizontalLayout = new QHBoxLayout(this);
-        horizontalLayout->addStretch();
-        horizontalLayout->addWidget(videoMock);
-        horizontalLayout->addStretch();
-
-        horizontalLayout->setStretch(1, 10);
-
-        ui->verticalLayout->addLayout(horizontalLayout);
-
-        //ui->verticalLayout->addWidget(videoMock, Qt::AlignCenter);
+        ui->verticalLayout->addWidget(videoMock, Qt::AlignCenter);
     }
 
     ui->verticalLayout->setStretch(1, 5);
@@ -46,10 +36,8 @@ void VideoMemberWidget::updateFrame(QByteArray frameData)
 {
     if (videoMock) {
         QPixmap pixmap;
-        if (pixmap.loadFromData(frameData, "JPG")) {
+        if (pixmap.loadFromData(frameData, "JPG"))
             videoMock->setPixmap(pixmap.scaled(videoMock->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
-            this->horizontalLayout->setStretch(1, 10);
-        }
     }
 }
 

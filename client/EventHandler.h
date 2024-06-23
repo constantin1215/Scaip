@@ -9,7 +9,7 @@
 class EventHandler : public QObject {
     Q_OBJECT
 public:
-    explicit EventHandler(MainWindow &ui, bool debug = false, QObject *parent = nullptr);
+    explicit EventHandler(bool debug = false, QObject *parent = nullptr);
 Q_SIGNALS:
     void fetchProfile(QString JWT);
     void updateUI(UI_UpdateType type, QJsonObject eventData);
@@ -17,7 +17,6 @@ Q_SIGNALS:
 public slots:
     void handleEvent(QString jsonString);
 private:
-    MainWindow *ui;
     bool debug;
     QString JWT;
 

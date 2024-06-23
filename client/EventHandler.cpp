@@ -45,11 +45,10 @@ static const  QMap<QString, EventsReceived> events {
     {"CALL_FINISHED", EventsReceived::CALL_FINISHED}
 };
 
-EventHandler::EventHandler(MainWindow &ui, bool debug, QObject *parent) :
+EventHandler::EventHandler(bool debug, QObject *parent) :
     QObject(parent),
     debug(debug)
 {
-    this->ui = &ui;
 }
 
 void EventHandler::handleEvent(QString jsonString)
