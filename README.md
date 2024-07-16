@@ -39,7 +39,7 @@ Therefore, ten microservices have been identified that need to be implemented:
 2. **Transaction**: A transaction on the entity tables and the Outbox table.
 3. **CDC process**: A Change Data Capture process that monitors the Outbox table and publishes events to the broker.
 
-![Outbox pattern](./diagrams/outbox.png)
+<img src="./diagrams/outbox.png" alt="Outbox pattern" width="600"/>
 
 **The Database per Service pattern** involves allocating a separate database for each microservice (if needed) within the architecture. This approach provides benefits such as:
 
@@ -48,4 +48,21 @@ Therefore, ten microservices have been identified that need to be implemented:
 - Direct access to the microservice's data by other microservices is blocked
 - The ability to use multiple technologies for data storage
 
-However, this pattern increases the system's complexity in terms of management and necessitates the implementation of mechanisms such as those previously presented.
+However, this pattern increases the system's complexity in terms of management and necessitates the implementation of additional mechanisms.
+
+<img src="./diagrams/db-per-service.png" alt="DB per Service" width="600"/>
+
+**The Event Sourcing pattern** involves storing data as a sequence of events, rather than the traditional method of storing only the current state of the data. Due to the use of Apache Kafka, this pattern naturally arises from the way the broker operates. Messages transmitted through Kafka are stored in an immutable event store, meaning they cannot be modified or deleted. The advantages of this pattern include:
+
+- Reconstructing the system's state for disaster recovery or analyzing its state at specific points in time
+- Creating a history that can be used for auditing or debugging
+
+<img src="./diagrams/event sourcing.png" alt="Event Sourcing" width="400"/>
+
+**The Materialized View pattern** involves the same concept as a Materialized View in databases, which means copying and arranging data from multiple tables to improve query performance. In the case of microservices architectures, microservices are implemented to gather data from various sources and store it in multiple formats to enhance query performance.
+
+### The architecture
+
+<img src="./diagrams/arh.png" alt="Arhitecture"/>
+
+**WIP**
