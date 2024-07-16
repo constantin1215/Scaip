@@ -39,3 +39,13 @@ Therefore, ten microservices have been identified that need to be implemented:
 2. **Transaction**: A transaction on the entity tables and the Outbox table.
 3. **CDC process**: A Change Data Capture process that monitors the Outbox table and publishes events to the broker.
 
+![Outbox pattern](./diagrams/outbox.png)
+
+**The Database per Service pattern** involves allocating a separate database for each microservice (if needed) within the architecture. This approach provides benefits such as:
+
+- Isolation and independence of microservices
+- Individual scalability for the associated database
+- Direct access to the microservice's data by other microservices is blocked
+- The ability to use multiple technologies for data storage
+
+However, this pattern increases the system's complexity in terms of management and necessitates the implementation of mechanisms such as those previously presented.
