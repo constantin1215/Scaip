@@ -86,6 +86,15 @@ It can be observed that the Outbox pattern was applied to the Users, Groups, Mes
 
 ### The videoconference
 
+This is the experimental and unconventional part of the project. I attempted to implement the videoconference using Kafka due to its high throughput and an idea where the videoconference could be downloaded after it ends, similar to how matches can be downloaded in League of Legends or Dota 2.
+
 <img src="./diagrams/call.png" alt="Call"/>
 
-**WIP**
+The overall result was quite poor because I'm new to Kafka and event-driven architectures and didn't know what to expect. The videoconference itself has problems such as lack of synchronization, delays, and the inability for two members of the call to be heard simultaneously. Here's how it works:
+
+1. The video or audio stream is sent to the respective microservice via WebSocket.
+2. The receiving microservice puts the received data in the video or audio topic specific to that call.
+3. The microservice pools data from the topic for 1 second.
+4. The data is sent to the members of the call.
+
+### *WIP*
