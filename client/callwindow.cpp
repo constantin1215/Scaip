@@ -218,7 +218,7 @@ void CallWindow::initAudioInput(const QAudioDevice &device)
         return;
     }
 
-    static const qint64 bufferSizeAudio = 16384;
+    static const qint64 bufferSizeAudio = 32768;//16384;
 
     connect(inputSource, &QIODevice::readyRead, [this]() {
         const qint64 len = qMin(audioSource->bytesAvailable(), bufferSizeAudio);
@@ -290,7 +290,6 @@ QString CallWindow::getGroupId()
 
 void CallWindow::updateMembersData(QList<QJsonObject> members)
 {
-    qDebug() << "hello bitches";
     qDebug() << members;
 }
 
@@ -336,6 +335,9 @@ void CallWindow::onUpdateFrame(QString userId, QByteArray frameData)
 
 void CallWindow::onUpdateAudio(QString userId, QByteArray audioData)
 {
+    if (audioData.isNull() || audioData.isEmpty())
+        return;
+
     if (audioOutputDevice && userId != UserData::getInstance()->getId())
         audioOutputDevice->write(audioData);
 }

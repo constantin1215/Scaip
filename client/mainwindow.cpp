@@ -912,7 +912,7 @@ void MainWindow::on_register_Button_clicked()
     QString lastName = ui->input_last_name_register->text();
 
     if (username.length() < 4 || password.length() < 4 || email.length() < 4 || firstName.length() < 1 || lastName.length() < 1 ||
-        username.length() > 16 || password.length() > 16 || email.length() > 32 || firstName.length() > 24 || lastName.length() > 24) {
+        username.length() > 16 || password.length() > 16 || email.length() > 64 || firstName.length() > 24 || lastName.length() > 24) {
         ui->backButton->setEnabled(true);
         ui->register_Button->setEnabled(true);
 
@@ -1047,6 +1047,8 @@ void MainWindow::on_groupListWidget_itemClicked(QListWidgetItem *item)
                                                         call["title"].toString(),
                                                         call["type"].toString(),
                                                         call["type"].toString() == "SCHEDULED" ? call["scheduledTime"].toInteger() : 0);
+
+                    QObject::connect(widget, &CallWidget::sendEvent, this, &MainWindow::sendEvent);
 
                     QListWidgetItem *item = new QListWidgetItem(ui->callListWidget);
 

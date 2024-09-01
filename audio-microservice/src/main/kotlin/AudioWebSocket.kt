@@ -82,7 +82,11 @@ class AudioWebSocket {
             val consumerThread = Thread {
                 try {
                     while (true) {
-                        val records: ConsumerRecords<String, ByteBuffer> = consumer.poll(Duration.ofSeconds(1))
+                        val records: ConsumerRecords<String, ByteBuffer> = consumer.poll(Duration.ofMillis(100))
+
+                        if (records.isEmpty)
+                            continue
+
                         records.forEach {
                             multicastBinary(it.value(), "", channel)
                         }

@@ -34,7 +34,10 @@ VideoMemberWidget::~VideoMemberWidget()
 
 void VideoMemberWidget::updateFrame(QByteArray frameData)
 {
-    if (videoMock) {
+    if (frameData.isNull())
+        return;
+
+    if (videoMock != nullptr) {
         QPixmap pixmap;
         if (pixmap.loadFromData(frameData, "JPG"))
             videoMock->setPixmap(pixmap.scaled(videoMock->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));

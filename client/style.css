@@ -35,8 +35,3 @@ QListWidget[objectName^="groupListWidget"]::item:hover {
     border: 2px solid #1B99D4;
     border-radius: 10px;
 }
-
-QCheckBox::indicator {
-    border: 2px solid #32CD32;
-    border-radius: 100%;
-}

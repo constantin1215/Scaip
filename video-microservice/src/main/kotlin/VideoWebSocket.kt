@@ -112,7 +112,8 @@ class VideoWebSocket {
         }
 
         multicastMessage(gson.toJson(mapOf("EVENT" to Event.JOINED_VIDEO.toString(), "userId" to userId, "username" to username)), session.id, channel)
-        val members = sessions.keys.filter { it != userId }
+        //val members = sessions.keys.filter { it != userId }
+        val members = channels[channel]!!.filter { it != userId }
         session.asyncRemote.sendText(gson.toJson(mapOf("EVENT" to Event.JOINED_VIDEO.toString(), "members" to members, "usernames" to usernames.filter { it.key != userId })))
 
         val headers = createHeaders(Event.JOINED_VIDEO)
