@@ -103,3 +103,23 @@ Even though the result was not ideal, I believe that implementing a videoconfere
 
 All microservices were developed using Kotlin and the Quarkus framework, and they follow a similar structure. Each microservice has a main class that consumes events from Kafka, which are then passed to handler functions. Database interactions are managed through repository classes, and microservices using the Outbox Pattern also include an Outbox Repository. Additionally, each microservice has an `Event` enum that defines all the handled and resulting events.
 
+<img src="./diagrams/Users Classes.png" alt="microservice"/>
+
+### The structure of the UI
+
+Below is the class diagram for the implementation of the client application in C++ using the Qt framework:
+
+<img src="./diagrams/class_ui.png" alt="microservice"/>
+
+The MainWindow and CallWindow classes represent the main windows of the application, where users can interact using features such as chat and video conferencing. The NewGroupDialog, UserSearchDialog, MembersListDialog, CallDialog, and ScheduleCallDialog classes are secondary windows of the application that facilitate functionalities like creating a group, searching for users, call notifications, and scheduling a meeting.
+
+The UserWidget, MessageWidget, GroupWidget, and VideoMemberWidget classes represent graphical components used in both main and secondary windows to display information from a group or video call.
+
+The WSClient, VideoWSClient, and AudioWSClient classes are used to connect the application to the system. WSClient is used for general connection, while VideoWSClient and AudioWSClient are used for connecting to a call.
+
+The EventHandler class is used to handle events received through WSClient and determine how the window represented by MainWindow is updated (UIUpdateTypes).
+
+The UserData class is a singleton used to access the authenticated user's data anywhere in the application.
+
+It is worth mentioning that not all attributes and methods present in the implementation have been added to the classes in the diagram, as some classes contain a large number of methods and attributes, which would clutter the diagram.
+
