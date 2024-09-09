@@ -97,4 +97,9 @@ The overall result was quite poor because I'm new to Kafka and event-driven arch
 3. The microservice pools data from the topic for 1 second.
 4. The data is sent to the members of the call.
 
-### *WIP*
+Even though the result was not ideal, I believe that implementing a videoconference through Kafka is achievable at a more acceptable level with more time and resources dedicated to developing a better algorithm. I plan to revisit this idea in the future as I gain more experience in software engineering and potentially seek guidance from experts in video/audio streaming.
+
+### The structure of a microservice
+
+All microservices were developed using Kotlin and the Quarkus framework, and they follow a similar structure. Each microservice has a main class that consumes events from Kafka, which are then passed to handler functions. Database interactions are managed through repository classes, and microservices using the Outbox Pattern also include an Outbox Repository. Additionally, each microservice has an `Event` enum that defines all the handled and resulting events.
+
