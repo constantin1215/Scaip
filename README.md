@@ -109,7 +109,7 @@ All microservices were developed using Kotlin and the Quarkus framework, and the
 
 Below is the class diagram for the implementation of the client application in C++ using the Qt framework:
 
-<img src="./diagrams/class_ui.png" alt="microservice"/>
+<img src="./diagrams/class_ui.png" alt="ui"/>
 
 The MainWindow and CallWindow classes represent the main windows of the application, where users can interact using features such as chat and video conferencing. The NewGroupDialog, UserSearchDialog, MembersListDialog, CallDialog, and ScheduleCallDialog classes are secondary windows of the application that facilitate functionalities like creating a group, searching for users, call notifications, and scheduling a meeting.
 
@@ -122,4 +122,7 @@ The EventHandler class is used to handle events received through WSClient and de
 The UserData class is a singleton used to access the authenticated user's data anywhere in the application.
 
 It is worth mentioning that not all attributes and methods present in the implementation have been added to the classes in the diagram, as some classes contain a large number of methods and attributes, which would clutter the diagram.
+
+<img src="./diagrams/chat.png" alt="chat_ui"/>
+<img src="./diagrams/test.jpg" alt="test"/>
 
