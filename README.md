@@ -1,10 +1,10 @@
 # Scaip a videoconference application
 
-This project presents the design and implementation of a videoconference application with a microservices-oriented architecture. The communication between system components is event-based and implemented using Apache Kafka.
+This project explores the design and implementation of a videoconferencing application built with a microservices architecture. System components communicate through an event-driven approach using Apache Kafka.
 
-Microservices were identified based on entities and characteristics determined from existing market solutions. They were developed with an emphasis on isolation, so each microservice has its own database. Certain patterns were applied to the system to avoid inconsistencies and minimize interactions between microservices.
+To define the microservices, I analyzed existing market solutions and identified key entities and characteristics. Each microservice was designed for isolation, with its own dedicated database. I also applied specific architectural patterns to reduce inconsistencies and minimize cross-service dependencies.
 
-Practically, all microservices were developed using the Kotlin language and the Quarkus framework. The interface is a desktop client developed using the C++ language and the Qt framework, to have high control over video and audio capture. The videoconference was implemented in an unconventional way, using Apache Kafka.
+The microservices were developed in Kotlin using the Quarkus framework. The client was built using C++ and Qt. Instead of a traditional approach, the videoconferencing functionality was handled using Apache Kafka.
 
 ## Design
 
